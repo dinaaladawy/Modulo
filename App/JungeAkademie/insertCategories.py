@@ -13,14 +13,16 @@ from modulo.models import Category
 categoryFile = "./categories.txt"
 
 def insertCategories():
-    #test = Category(name='TestCategory')
-    #c = Category(name='Ausgrenzung')
     with open(categoryFile, 'r') as f:
+        add = 0
         for line in f:
             line = line.replace("\n", "")
-            c, add = Category.objects.get_or_create(name=line)
-            print(line, add, sep=' ', end='\n')
+            c, added = Category.objects.get_or_create(name=line)
+            add += 1 if added else 0
+            #print(line, added, sep=' ', end='\n')
         f.close()
-    #input()
+    print("Number of added categories =", add)
+    print('Number of categories in database =', len(Category.objects.all()))
 
 insertCategories()
+input("Press ENTER to exit program...")

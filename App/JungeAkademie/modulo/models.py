@@ -9,7 +9,6 @@ class Exam():
     PAPER = 2
     OTHER = 3
     NOT_SPECIFIED = 4
-    EITHER = -1
     
 class Location():
     FREISING = 0
@@ -18,7 +17,6 @@ class Location():
     INNER_CITY = 3
     OTHER = 4
     NOT_SPECIFIED = 5
-    EITHER = -1
 
 class Personality():
     STRICT = 0
@@ -50,6 +48,7 @@ class CourseFormat():
 class Language():
     ENGLISH = 'EN'
     GERMAN = 'DE'
+    OTHER = '??'
     NOT_SPECIFIED = ''
 
 class Interests(models.Model):
@@ -74,39 +73,91 @@ class Category(models.Model):
 
 class Module(models.Model):
     #title, prof, time, place (F, G, H, I), exam, credits, categoryList (5 elem) -> Many-to-many relationship
-    EXAM_TYPES = ((Exam.WRITTEN_EXAM, 'Written exam'), (Exam.ORAL_EXAM, 'Oral exam'), (Exam.PAPER, 'paper'), (Exam.OTHER, 'Other'), (Exam.NOT_SPECIFIED, ''))
-    LOCATIONS = ((Location.FREISING, 'Freising'), (Location.GARCHING, 'Garching'), (Location.GARCHING_HOCHBRÜCK, 'Garching-Hochbrück'), (Location.INNER_CITY, 'Inner city'), (Location.OTHER, 'Other'), (Location.NOT_SPECIFIED, ''))
-    LANGUAGES = ((Language.ENGLISH, 'English'), (Language.GERMAN, 'German'), (Language.NOT_SPECIFIED, ''))
-    COURSE_TYPES = ((CourseFormat.SEMINAR, 'Seminar'), (CourseFormat.WORKSHOP, 'Workshop'), (CourseFormat.COLLOQUIUM, 'Colloquium'), (CourseFormat.MODULE, 'Module'), (CourseFormat.COURSE, 'Course'), (CourseFormat.EXERCICE, 'Exercice'), (CourseFormat.EXCURSION, 'Excursion'), (CourseFormat.PRESENTATION, 'Presentation'), (CourseFormat.OTHER, 'Other'), (CourseFormat.NOT_SPECIFIED, ''))
-          
-    id = models.AutoField(primary_key=True)
-    title = models.CharField(max_length=100, default='')
-    time = models.TimeField(default='00:00')
-    place = models.IntegerField(choices=LOCATIONS, default=Location.NOT_SPECIFIED)
-    credit = models.IntegerField(default=0)
-    exam = models.IntegerField(choices=EXAM_TYPES, default=Exam.WRITTEN_EXAM)
-    categories = models.ManyToManyField(Category)
+    EXAM_TYPES = ((Exam.WRITTEN_EXAM, 'Written exam'), \
+                  (Exam.ORAL_EXAM, 'Oral exam'), \
+                  (Exam.PAPER, 'paper'), \
+                  (Exam.OTHER, 'Other'), \
+                  (Exam.NOT_SPECIFIED, ''))
+    LOCATIONS = ((Location.FREISING, 'Freising'), \
+                 (Location.GARCHING, 'Garching'), \
+                 (Location.GARCHING_HOCHBRÜCK, 'Garching-Hochbrück'), \
+                 (Location.INNER_CITY, 'Inner city'), \
+                 (Location.OTHER, 'Other'), \
+                 (Location.NOT_SPECIFIED, ''))
+    LANGUAGES = ((Language.ENGLISH, 'English'), \
+                 (Language.GERMAN, 'German'), \
+                 (Language.OTHER, 'Other'), \
+                 (Language.NOT_SPECIFIED, ''))
+    COURSE_TYPES = ((CourseFormat.SEMINAR, 'Seminar'), \
+                    (CourseFormat.WORKSHOP, 'Workshop'), \
+                    (CourseFormat.COLLOQUIUM, 'Colloquium'), \
+                    (CourseFormat.MODULE, 'Module'), \
+                    (CourseFormat.COURSE, 'Course'), \
+                    (CourseFormat.EXERCICE, 'Exercice'), \
+                    (CourseFormat.EXCURSION, 'Excursion'), \
+                    (CourseFormat.PRESENTATION, 'Presentation'), \
+                    (CourseFormat.OTHER, 'Other'), \
+                    (CourseFormat.NOT_SPECIFIED, ''))
+
+    #pk = title, language, exam, credits, place?
+    id =            models.AutoField(primary_key=True)
+    title =         models.CharField(max_length=100, default='')
+    time =          models.TimeField(default='00:00')
+    credits =       models.IntegerField(default=0)
+    place =         models.IntegerField(choices=LOCATIONS, default=Location.NOT_SPECIFIED)
+    exam =          models.IntegerField(choices=EXAM_TYPES, default=Exam.NOT_SPECIFIED)
+    categories =    models.ManyToManyField(Category)
     
     # extra information about courses
-    subtitle = models.TextField(editable=False, default='')
-    description = models.TextField(editable=False, default='')
-    goals = models.TextField(editable=False, default='')
-    methods = models.TextField(editable=False, default='')
-    sws = models.IntegerField(default=0)
-    type = models.IntegerField(choices=COURSE_TYPES, default=CourseFormat.NOT_SPECIFIED)
-    language = models.CharField(max_length=2, choices=LANGUAGES, default=Language.NOT_SPECIFIED)
-    minParticipants = models.IntegerField(default=0)
-    maxParticipants = models.IntegerField(default=sys.maxsize)
+    organisers =        models.TextField(editable=False, default='')
+    subtitle =          models.TextField(editable=False, default='')
+    description =       models.TextField(editable=False, default='')
+    goals =             models.TextField(editable=False, default='')
+    methods =           models.TextField(editable=False, default='')
+    exam_details =      models.TextField(editable=False, default='')
+    sws =               models.FloatField(default=0.0)
+    minParticipants =   models.IntegerField(default=0)
+    maxParticipants =   models.IntegerField(default=sys.maxsize)
+    type =              models.IntegerField(choices=COURSE_TYPES, default=CourseFormat.NOT_SPECIFIED)
+    language =          models.CharField(max_length=2, choices=LANGUAGES, default=Language.NOT_SPECIFIED)
     
     def __str__(self):
         return self.title
 
+    def __eq__(self, other):
+        d1 = self.__dict__
+        d2 = other.__dict__
+        if len(d1) != len(d2):
+            return False
+        for key, value in d1.items():
+            if not (key.startswith('_') or (key in d2 and d2[key] == value)):
+                return False
+        for key, value in d2.items():
+            if not (key.startswith('_') or (key in d1 and d1[key] == value)):
+                return False
+        return True
+    
+    def __ne__(self, other):
+        return not self == other
+
     class Meta:
-        ordering = ('title', 'credit', 'time', 'id',)
+        ordering = ('title', 'credits', 'time', 'id',)
 
 class TestPersons(models.Model):
     #name, personality type (pers_type), modules
-    PERSONALITY_TYPES = ((Personality.STRICT, 'strict'), (Personality.LOOSE, 'loose'), (Personality.CURIOUS, 'curious'), (Personality.CREDIT_ORIENTED, 'credit-oriented'), (Personality.LAZY, 'lazy'), (Personality.NERD, 'nerd'), (Personality.DO_IT_ALL, 'do-it-all'), (Personality.TIME_PRESSURED, 'time-pressured'), (Personality.DETAIL_ORIENTED, 'detail-oriented'), (Personality.ANYTHING_WORKS, 'anything works'), (Personality.EASY_EXAM, 'easy exam'), (Personality.ONLY_WRITTEN_EXAM, 'only written exam'), (Personality.THE_HARDER_THE_BETTER, 'the harder, the better'), )
+    PERSONALITY_TYPES = ((Personality.STRICT, 'strict'), \
+                         (Personality.LOOSE, 'loose'), \
+                         (Personality.CURIOUS, 'curious'), \
+                         (Personality.CREDIT_ORIENTED, 'credit-oriented'), \
+                         (Personality.LAZY, 'lazy'), \
+                         (Personality.NERD, 'nerd'), \
+                         (Personality.DO_IT_ALL, 'do-it-all'), \
+                         (Personality.TIME_PRESSURED, 'time-pressured'), \
+                         (Personality.DETAIL_ORIENTED, 'detail-oriented'), \
+                         (Personality.ANYTHING_WORKS, 'anything works'), \
+                         (Personality.EASY_EXAM, 'easy exam'), \
+                         (Personality.ONLY_WRITTEN_EXAM, 'only written exam'), \
+                         (Personality.THE_HARDER_THE_BETTER, 'the harder, the better'), )
 
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=50, default='')

@@ -13,7 +13,7 @@ Antike
 Anwendung
 Apologie
 Arbeitsplatz
-ArbeitsTechnologie
+Arbeitstechnologie
 Archiv
 Argumentation
 Asien
@@ -115,7 +115,6 @@ Globalisierung
 Glück
 Governance 
 Grenzen
-Grenzen
 Großanlagenbau
 Großprojekt
 Grundlagen
@@ -143,6 +142,7 @@ Ingenieurwissenschaften
 Innovation
 Instrument
 Interdisziplinär
+Interkulturell
 Internet
 Internet of Things
 Intervention
@@ -164,7 +164,6 @@ Konzentration
 Konzept
 Kopf
 Körper
-Körper
 Körperhaltung
 Körpersprache
 Kosmologie
@@ -185,7 +184,6 @@ Lebensenergie
 Lebenswissenschaften
 Leitkultur
 Lektüre
-Lesen
 Lesen
 Linde
 Logik
