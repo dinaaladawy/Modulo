@@ -8,18 +8,17 @@ Created on Mon Mar 13 14:11:11 2017
 import django, os, re, datetime
 os.environ['DJANGO_SETTINGS_MODULE'] = "JungeAkademie.settings"
 django.setup()
-from openpyxl import load_workbook
 from modulo.models import Category, Module, Language, Exam, CourseFormat, Location
-#from openpyxl.worksheet.worksheet import Worksheet
+from openpyxl import load_workbook
 
 moduleFile = "./modules.xlsx"
 
 def getCategory(cell=None):
-    if cell.value == None:
+    if cell.value is None:
         return None
     else:
         try:
-            return Category.objects.get(name=cell.value)
+            return Category.objects.get(name=cell.value.strip())
         except Category.DoesNotExist:
             print("Category", cell.value, "does not exist!!!")
             return None
@@ -31,13 +30,13 @@ def getTime(cell=None):
     return datetime.time(hour=0, minute=0, second=0)
 
 def getOrganisers(cell=None):
-    if cell.value == None:
+    if cell.value is None:
         return ""
     
     return cell.value.replace("_", "; ")
 
 def getCredits(cell=None):
-    if cell.value == None:
+    if cell.value is None:
         return 0
     
     try:
@@ -52,7 +51,7 @@ def getCredits(cell=None):
 
 def getLanguage(cell=None):
     val = []
-    if cell.value == None:
+    if cell.value is None:
         return [Language.NOT_SPECIFIED]
     
     if 'german' in cell.value.lower() or 'deutsch' in cell.value.lower():
@@ -65,7 +64,7 @@ def getLanguage(cell=None):
 
 def getExam(cell=None):
     val = []
-    if cell.value == None:
+    if cell.value is None:
         return [Exam.NOT_SPECIFIED], ''
     
     if ('schriftlich' in cell.value.lower() and 'prüfung' in cell.value.lower()) or \
@@ -80,17 +79,19 @@ def getExam(cell=None):
             'colloquium' in cell.value.lower() or \
             ('oral' in cell.value.lower() and 'exam' in cell.value.lower()):
         val.append(Exam.ORAL_EXAM)
+    '''
     if 'referat' in cell.value.lower() or \
             'paper' in cell.value.lower() or\
             'essay' in cell.value.lower():
         val.append(Exam.PAPER)
+    '''
     if val == []:
         val.append(Exam.OTHER)
     return val, cell.value
 
 def getType(cell=None):
     val = []
-    if cell.value == None:
+    if cell.value is None:
         return [CourseFormat.NOT_SPECIFIED]
     
     if 'seminar' in cell.value.lower():
@@ -162,19 +163,21 @@ def updateOrCreateModule(attr, row):
     try:
         old = Module.objects.get(title=title)
     except Module.DoesNotExist:
-        old = Module()
+        old = None
         
     m, created = Module.objects.update_or_create(title=title, defaults=defaults)
-    categoryList = list(filter(None, categoryList))
-    #if m.categories.all() != categoryList:
-        #print("Updated categories for module", m)
-        #print(categoryList)
-    try:
-        m.categories.set(categoryList) #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    except django.core.exceptions.FieldDoesNotExist:
-        print("Error on module", m)
+    assert((old is None) == created) #old is None <=> created
     
-    updated = (not created and old != m)
+    categoryList = list(filter(None, categoryList))
+    updatedCategories = False
+    if set([c.name for c in m.categories.all()]) != set([c.name for c in categoryList]):
+        m.categories.set(categoryList)
+        updatedCategories = True
+        print("Updated categories for module", m)
+        #print(set([c.name for c in m.categories.all()]))
+        #print(set([c.name for c in categoryList]))
+        
+    updated = not created and (updatedCategories or old != m)
     if updated:
         print("Module ", m, " was updated.", sep='')
     return m, updated, created
@@ -182,7 +185,7 @@ def updateOrCreateModule(attr, row):
 def insertModules():
     #workbook = load_workbook(moduleFile, read_only=True)
     workbook = load_workbook(moduleFile)
-    worksheet = workbook['Modules']
+    worksheet = workbook['modules']
     nrRows = len(tuple(worksheet.rows))
     nrCols = len(tuple(worksheet.columns))
     attr = ['title', 'organisers', 'subtitle', 'description', 'goals', 'methods', 'sws', 'credits', 'type', 'exam_details', 'language', 'minParticipants', 'maxParticipants', 'category1', 'category2', 'category3', 'category4', 'category5', 'defaults']

@@ -8,15 +8,15 @@ Created on Mon Mar 13 14:11:11 2017
 import django, os
 os.environ['DJANGO_SETTINGS_MODULE'] = "JungeAkademie.settings"
 django.setup()
-from modulo.models import Category
+from modulo.models import Interest
 from openpyxl import load_workbook
 
-categoryFile = "./categories.xlsx"
+interestFile = "./interests.xlsx"
 
-def insertCategories():
-    #workbook = load_workbook(categoryFile, read_only=True)
-    workbook = load_workbook(categoryFile)
-    worksheet = workbook['categories']
+def insertInterests():
+    #workbook = load_workbook(interestFile, read_only=True)
+    workbook = load_workbook(interestFile)
+    worksheet = workbook['interests']
     nrRows = len(tuple(worksheet.rows))
     nrCols = len(tuple(worksheet.columns))
     
@@ -27,13 +27,13 @@ def insertCategories():
         cell = row[0]
         if cell.value is None:
             continue
-        c, added = Category.objects.get_or_create(name=cell.value.strip())
+        i, added = Interest.objects.get_or_create(name=cell.value.strip())
         add += 1 if added else 0
         #print(m)
-    
-    print("Number of added categories =", add)
-    print('Number of categories in database =', len(Category.objects.all()))
+
+    print("Number of added interests =", add)
+    print('Number of interests in database =', len(Interest.objects.all()))
     workbook.close()
 
-insertCategories()
+insertInterests()
 input("Press ENTER to exit program...")

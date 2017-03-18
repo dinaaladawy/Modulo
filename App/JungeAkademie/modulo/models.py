@@ -6,7 +6,7 @@ import sys
 class Exam():
     WRITTEN_EXAM = 0
     ORAL_EXAM = 1
-    PAPER = 2
+    #PAPER = 2
     OTHER = 3
     NOT_SPECIFIED = 4
     
@@ -51,7 +51,7 @@ class Language():
     OTHER = '??'
     NOT_SPECIFIED = ''
 
-class Interests(models.Model):
+class Interest(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100, default='')
     
@@ -75,8 +75,8 @@ class Module(models.Model):
     #title, prof, time, place (F, G, H, I), exam, credits, categoryList (5 elem) -> Many-to-many relationship
     EXAM_TYPES = ((Exam.WRITTEN_EXAM, 'Written exam'), \
                   (Exam.ORAL_EXAM, 'Oral exam'), \
-                  (Exam.PAPER, 'paper'), \
-                  (Exam.OTHER, 'Other'), \
+                  #(Exam.PAPER, 'paper'), \
+                  (Exam.OTHER, 'Assessed/continuous assessment'), \
                   (Exam.NOT_SPECIFIED, ''))
     LOCATIONS = ((Location.FREISING, 'Freising'), \
                  (Location.GARCHING, 'Garching'), \
