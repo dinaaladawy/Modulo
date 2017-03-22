@@ -1,0 +1,27 @@
+{% extends "./main-documentation.html" %}
+{% block title %}
+{{ class }} items
+{% endblock %}
+
+{% block content %}
+	Here is the list of all items in the database for table {{ class }}
+	{% for obj in class_objects %}
+		<p> 
+			
+			{% if class == 'Module' %}
+				<li><a href="{% url 'modulo:modulo-module-title' obj %}">{{ obj }}</a>
+			{% elif class == 'Category' %}
+				<li><a href="{% url 'modulo:modulo-category-name' obj %}">{{ obj }}</a>
+			{% elif class == 'Interest' %}
+				<li><a href="{% url 'modulo:modulo-interest-name' obj %}">{{ obj }}</a>
+			{% else %}
+				Unknown table in database...
+			{% endif %}
+			
+			<!-- <li>{{ obj }} -->
+		</p>
+	{% endfor %}
+{% endblock %}
+
+{% comment %}
+{% endcomment %}
