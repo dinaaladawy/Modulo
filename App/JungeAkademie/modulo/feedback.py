@@ -26,6 +26,12 @@ class Feedback():
         if not notSeenModules is None:
             self.notSeenModules = notSeenModules
     
-    def setFeedback(self, selected_modules):
-        self.recommendation.incorporateFeedback(self.selectedModule)
+    def setFeedback(self):
+        modules_dict = {}
+        modules_dict['selected'] = self.selectedModule
+        modules_dict['interesting'] = self.interestingModules
+        modules_dict['notForMe'] = self.notForMeModules
+        modules_dict['seen'] = self.seenModules
+        modules_dict['notSeen'] = self.notSeenModules
+        self.recommendation.incorporateFeedback(modules_dict)
     
