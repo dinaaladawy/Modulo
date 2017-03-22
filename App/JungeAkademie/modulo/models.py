@@ -108,6 +108,8 @@ class Module(models.Model):
     exam =          models.IntegerField(choices=EXAM_TYPES, default=Exam.NOT_SPECIFIED)
     categories =    models.ManyToManyField(Category)
     
+    selections =    models.BigIntegerField(default=0)
+    
     # extra information about courses
     organisers =        models.TextField(editable=False, default='')
     subtitle =          models.TextField(editable=False, default='')
