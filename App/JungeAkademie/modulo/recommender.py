@@ -48,7 +48,8 @@ class Recommender():
     #regularization rate
     beta = 0.0
     
-    def __init__(self, timeInterval=(datetime.datetime.strptime('00:00', '%H:%M').time(), datetime.datetime.strptime('23:59', '%H:%M').time()), location=[Location.NOT_SPECIFIED], examType=[Exam.NOT_SPECIFIED], credits=(0, float('inf')), interests=[]):
+    def __init__(self, id, timeInterval=(datetime.datetime.strptime('00:00', '%H:%M').time(), datetime.datetime.strptime('23:59', '%H:%M').time()), location=[Location.NOT_SPECIFIED], examType=[Exam.NOT_SPECIFIED], credits=(0, float('inf')), interests=[]):
+        self.id = id
         self.filters = {'time': timeInterval,  #tuple with range of starting time of course
                         'exam': examType,      #list of acceptable exam types
                         'place': location,     #list of locations
@@ -87,7 +88,7 @@ class Recommender():
         #FIXME: problem with multithreadding; just one global session???
         output = Recommender.session.run(self.op, {Recommender.x: self.input}); output = output[0]
         
-        sortedIndices = sorted(range(len(Recommender.category_names)), key=lambda k: output[k])
+        sortedIndices = sorted(range(len(Recommender.category_names)), key=lambda k: output[k], reverse=True)
         return [Recommender.category_names[i] for i in sortedIndices], [output[i] for i in sortedIndices]
     
     #apply learning algorithm to map the selected interests to categories
@@ -95,9 +96,9 @@ class Recommender():
     def __getCategoriesFromInterests(self):
         categories_sorted, probs = self.__algorithm1()
         nrCategs = len(categories_sorted)
-        threshhold = 0.1 if nrCategs > 100 else 0.2 if nrCategs > 50 else 0.5 if nrCategs > 20 else 1
-        threshhold = int(threshhold*len(categories_sorted))
-        return categories_sorted[:threshhold], probs[:threshhold]
+        threshold = 0.1 if nrCategs > 100 else 0.2 if nrCategs > 50 else 0.5 if nrCategs > 20 else 1
+        threshold = int(threshold*len(categories_sorted))
+        return categories_sorted[:threshold], probs[:threshold]
     
     #checks if the module is in compliance with the filters
     def __checkModule(self, m):
@@ -107,7 +108,7 @@ class Recommender():
                 if not (value[0] <= module_value <= value[1]):
                     return False
             if key == 'exam':
-                if module_value != Exam.NOT_SPECIFIED and module_value not in value:
+                if module_value != Exam.NOT_SPECIFIED and module_value != value:
                     return False
             if key == 'place':
                 if module_value != Location.NOT_SPECIFIED and module_value not in value:
@@ -156,7 +157,9 @@ class Recommender():
         Recommender.b = tf.Variable(tf.random_normal([nrCateg], mean=0, stddev=1), validate_shape=False) #biases
         #print("Recommender.W = ", Recommender.W, sep='')
         #print("Recommender.b = ", Recommender.b, sep='')
-        Recommender.session = tf.Session()
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
+        Recommender.session = tf.Session(config=config)
         Recommender.session.run(tf.global_variables_initializer())
         
         Recommender.category_names = [c.name for c in categories]
@@ -167,6 +170,7 @@ class Recommender():
         #print("Recommender.alpha = ", Recommender.alpha, sep='')
         Recommender.beta = 0.01
         #print("Recommender.beta = ", Recommender.beta, sep='')
+        print("Recommender initialized")
     
     def updateFilters(self, timeInterval=None, location=None, examType=None, credits=None, interests=None):
         if not timeInterval is None:
@@ -182,12 +186,14 @@ class Recommender():
     
     def recommend(self):
         # map the interests to the module categories (learning algorithm 1)
-        self.filters['categories'] = self.__getCategoriesFromInterests()
+        selected_categories, probabilities = self.__getCategoriesFromInterests()
+        print(selected_categories, probabilities, sep='\n')
+        self.filters['categories'] = selected_categories
         
         # apply the filters on the list of modules (use objects.filter(...))
         modules = self.__filterModules()
         
-        # sort the remaining modules (according to what???: learning algorithm 2?)
+        # TODO: sort the remaining modules (according to what???: learning algorithm 2?)
         # current: sort according to relevance (number of selections of module)
         # self.modules = self.__sortModules(modules)
         return self.__sortModules(modules)

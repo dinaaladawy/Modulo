@@ -3,6 +3,10 @@
 {{ class }}: "{{ documentation_object }}"
 {% endblock %}
 
+{% block header %}
+{{ class }}: "{{ documentation_object }}"
+{% endblock %}
+
 {% block content %}
 	{% for attr in documentation_attributes %}
 		<p> 

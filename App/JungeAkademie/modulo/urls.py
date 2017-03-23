@@ -42,8 +42,15 @@ documentation_patterns = [
     url(r'^module/', include(module_patterns)), 
 ]
 
+recommender_patterns = [
+    url(r'^$', views.recommend, name='modulo-recommend'),
+    url(r'^recommendation/$', views.recommendation, name='modulo-recommendation'),
+    url(r'^recommendation/(?P<recommendation_id>\d+)$', views.recommendation, name='modulo-recommendation'),
+    url(r'^thanks/?$', views.recommender_thanks, name='modulo-recommender-thanks')
+]
+
 urlpatterns = [
     url(r'^$', views.index, name='modulo-index'),
-    url(r'^recommend/$', views.recommend, name='modulo-recommend'),
+    url(r'^recommend/', include(recommender_patterns)),
     url(r'^documentation/', include(documentation_patterns)),
 ]

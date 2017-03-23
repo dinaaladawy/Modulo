@@ -3,19 +3,24 @@
 {{ class }} items
 {% endblock %}
 
+{% block header %}
+{{ class }} items
+{% endblock %}
+
 {% block content %}
 	Here is the list of all items in the database for table {{ class }}
 	{% for obj in class_objects %}
 		<p> 
-			
 			{% if class == 'Module' %}
-				<li><a href="{% url 'modulo:modulo-module-title' obj %}">{{ obj }}</a>
+				<li><a href="{% url 'modulo:modulo-module-title' obj %}">{{ obj }}</a></li>
 			{% elif class == 'Category' %}
-				<li><a href="{% url 'modulo:modulo-category-name' obj %}">{{ obj }}</a>
+				<li><a href="{% url 'modulo:modulo-category-name' obj %}">{{ obj }}</a></li>
 			{% elif class == 'Interest' %}
-				<li><a href="{% url 'modulo:modulo-interest-name' obj %}">{{ obj }}</a>
+				<li><a href="{% url 'modulo:modulo-interest-name' obj %}">{{ obj }}</a></li>
+			{% elif class == 'Recommendation' %}
+				<li><a href="{% url 'modulo:modulo-module-title' obj.title %}">{{ obj.title }}</a></li>
 			{% else %}
-				Unknown table in database...
+				<li>Unknown table in database...</li>
 			{% endif %}
 			
 			<!-- <li>{{ obj }} -->
