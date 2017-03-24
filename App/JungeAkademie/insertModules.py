@@ -202,7 +202,7 @@ def insertModules():
     print('Number of creations in database =', creations)
     print('Number of updates in database =', updates)
     print('Number of modules in database =', len(Module.objects.all()))
-    workbook.close()
+    #workbook.close()
     
 insertModules()
 input("Press ENTER to exit program...")
