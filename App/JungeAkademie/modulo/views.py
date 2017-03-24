@@ -3,7 +3,7 @@
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render, reverse
 from .models import Exam, Location, Category, Interest, Module
-from .recommender import Recommender
+from .recommender import Recommender, HandleRecommender
 from .feedback import Feedback
 from .forms import RecommenderForm, ModuleForm
 import datetime

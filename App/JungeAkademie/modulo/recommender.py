@@ -11,6 +11,7 @@ from django.dispatch import receiver
 import numpy as np
 import tensorflow as tf
 import datetime
+import json
 
 #matrix must be a numpy 2d array (matrix..)
 #accepted is also a 1d array...
@@ -27,6 +28,13 @@ def normalizeProbabilitiesCol(matrix):
     #assert that column sum is 1
     assert((np.abs(np.sum(matrix, axis=0) - compare) < 1e-9).all())
     return matrix
+
+class HandleRecommender(json.JSONEncoder):
+     """ json.JSONEncoder extension: handle Recommender """
+     def default(self, obj):
+         if isinstance(obj, Recommender):
+             return Recommender.get_json_from_recommendation(obj)
+         return json.JSONEncoder.default(self, obj)
 
 class Recommender():
     #tensorflow session for training
@@ -48,12 +56,18 @@ class Recommender():
     #regularization rate
     beta = 0.0
     
-    def __init__(self, id, timeInterval=(datetime.datetime.strptime('00:00', '%H:%M').time(), datetime.datetime.strptime('23:59', '%H:%M').time()), location=[Location.NOT_SPECIFIED], examType=[Exam.NOT_SPECIFIED], credits=(0, float('inf')), interests=[]):
+    def __init__(self, 
+                 id=None, 
+                 timeInterval=(datetime.datetime.strptime('00:00', '%H:%M').time(), datetime.datetime.strptime('23:59', '%H:%M').time()), 
+                 location=[Location.NOT_SPECIFIED], 
+                 examType=[Exam.NOT_SPECIFIED], 
+                 credits=(0, float('inf')), 
+                 interests=[]):
         self.id = id
         self.filters = {'time': timeInterval,  #tuple with range of starting time of course
                         'exam': examType,      #list of acceptable exam types
                         'place': location,     #list of locations
-                        'credits': credits}     #tuple with range of acceptable credits
+                        'credits': credits}    #tuple with range of acceptable credits
         self.interests = interests #list of id's of interests from models.Interests
             
     #this algorithm uses a linear classifier to map the interests to categories
@@ -84,9 +98,9 @@ class Recommender():
 
         #linear classifier: res = softmax(W*x+b); 
         self.input = x
-        self.op = tf.nn.softmax(tf.add(tf.matmul(Recommender.x, Recommender.W), Recommender.b));
+        op = tf.nn.softmax(tf.add(tf.matmul(Recommender.x, Recommender.W), Recommender.b));
         #FIXME: problem with multithreadding; just one global session???
-        output = Recommender.session.run(self.op, {Recommender.x: self.input}); output = output[0]
+        output = Recommender.session.run(op, {Recommender.x: self.input}); output = output[0]
         
         sortedIndices = sorted(range(len(Recommender.category_names)), key=lambda k: output[k], reverse=True)
         return [Recommender.category_names[i] for i in sortedIndices], [output[i] for i in sortedIndices]
@@ -172,16 +186,18 @@ class Recommender():
         #print("Recommender.beta = ", Recommender.beta, sep='')
         print("Recommender initialized")
     
-    def updateFilters(self, timeInterval=None, location=None, examType=None, credits=None, interests=None):
-        if not timeInterval is None:
+    def updateFilters(self, timeInterval=None, location=None, examType=None, credits=None, categories=None, interests=None):
+        if timeInterval is not None:
             self.filters['time'] = timeInterval
-        if not location is None:
+        if location is not None:
             self.filters['place'] = location
-        if not examType is None:
+        if examType is not None:
             self.filters['exam'] = examType
-        if not credits is None:
+        if credits is not None:
             self.filters['credits'] = credits
-        if not interests is None:
+        if categories is not None:
+            self.filters['categories'] = categories
+        if interests is not None:
             self.interests = interests
     
     def recommend(self):
@@ -212,12 +228,12 @@ class Recommender():
         self.label = normalizeProbabilitiesCol(np.array([selected_categories.count(name) for name in Recommender.category_names]))
         
         #update the weights...
-        op = tf.nn.softmax(tf.add(tf.matmul(self.x, Recommender.W), Recommender.b))
-        loss = tf.reduce_sum(tf.square(op - self.y)) + Recommender.beta * tf.nn.l2_loss(Recommender.W) #add regularization
+        op = tf.nn.softmax(tf.add(tf.matmul(Recommender.x, Recommender.W), Recommender.b))
+        loss = tf.reduce_sum(tf.square(op - Recommender.y)) + Recommender.beta * tf.nn.l2_loss(Recommender.W) #add regularization
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=Recommender.alpha)
         train = optimizer.minimize(loss)        
         #print(Recommender.session.run([Recommender.W, Recommender.b]))
-        #print("loss = ", Recommender.session.run(loss, {self.x: self.input, self.y: self.label}))
+        #print("loss = ", Recommender.session.run(loss, {Recommender.x: self.input, Recommender.y: self.label}))
         Recommender.session.run(train, {Recommender.x: self.input, Recommender.y: self.label})        
     
     def save(self):
@@ -225,6 +241,54 @@ class Recommender():
         #what do save? what are relevant information needed to retrain the system?
         #filters, myRecomandation, userFeedback
         pass
+    
+    def get_json_from_recommendation(rec):
+        json_object = {}
+        json_object['id'] = rec.id
+        import copy
+        d = copy.deepcopy(rec.filters)
+        format = '%H:%M'; timeInterval = rec.filters['time']
+        d['time'] = (timeInterval[0].strftime(format), timeInterval[1].strftime(format))
+        json_object['filters'] = d
+        json_object['interests'] = rec.interests
+        json_object['input'] = rec.input.tolist()
+        return json_object
+    
+    def get_recommendation_from_json(json_object):
+        #print("JSON Object is", json_object)
+        cleanup_json_object = json.loads(json_object)
+        r = Recommender()
+        if 'id' in cleanup_json_object:
+            #Integer
+            r.id = cleanup_json_object['id']
+        if 'filters' in cleanup_json_object:
+            filters = cleanup_json_object['filters']
+            if 'exam' in filters:
+                #Integer
+                r.updateFilters(examType=filters['exam'])
+            if 'time' in filters:
+                #Tuple of datetime.time
+                format = '%H:%M'
+                timeInterval = (datetime.datetime.strptime(filters['time'][0], format).time(), datetime.datetime.strptime(filters['time'][1], format).time())
+                r.updateFilters(timeInterval=timeInterval)
+            if 'place' in filters:
+                #Integer
+                r.updateFilters(location=filters['place'])
+            if 'credits' in filters:
+                #tuple of Integers
+                credit_tuple = (filters['credits'][0], filters['credits'][1])
+                r.updateFilters(credits=credit_tuple)
+            if 'categories' in filters:
+                #list of strings
+                r.updateFilters(categories=filters['categories'])
+        if 'interests' in cleanup_json_object:
+            #list of strings
+            r.updateFilters(interests=cleanup_json_object['interests'])
+        if 'input' in json_object:
+            #numpy array...
+            r.input = np.array(cleanup_json_object['input'])
+            
+        return r
     
     def getWeights():
         temp_W = tf.slice(Recommender.W, begin=[0, 0], size=tf.shape(Recommender.W))
