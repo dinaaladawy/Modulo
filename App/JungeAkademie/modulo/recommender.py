@@ -5,29 +5,11 @@ Created on Mon Mar 13 14:11:11 2017
 @author: Andrei
 """
 
+from .algorithms import UpdateType, LinearClassifier
 from .models import Exam, Location, Interest, Category, Module
 from django.db.models.signals import pre_save, pre_delete
 from django.dispatch import receiver
-import numpy as np
-import tensorflow as tf
-import datetime
-import json
-
-#matrix must be a numpy 2d array (matrix..)
-#accepted is also a 1d array...
-def normalizeProbabilitiesCol(matrix):
-    compare = 1.0
-    if len(matrix.shape) > 1:
-        #dealing with matrix
-        compare = np.ones((matrix.shape[1],))
-        
-    if (np.abs(np.sum(matrix, axis=0) - compare) >= 1e-9).any():
-        #use softmax-type normalization
-        matrix = np.divide(np.exp(matrix), np.sum(np.exp(matrix), axis=0))
-    
-    #assert that column sum is 1
-    assert((np.abs(np.sum(matrix, axis=0) - compare) < 1e-9).all())
-    return matrix
+import datetime, json, copy
 
 class HandleRecommender(json.JSONEncoder):
      """ json.JSONEncoder extension: handle Recommender """
@@ -37,24 +19,13 @@ class HandleRecommender(json.JSONEncoder):
          return json.JSONEncoder.default(self, obj)
 
 class Recommender():
-    #tensorflow session for training
-    session = None
-    #weights
-    W = tf.Variable([], validate_shape=False)
-    #biases
-    b = tf.Variable([], validate_shape=False)
-    #input vector
-    x = tf.placeholder(tf.float32)
-    #label vector
-    y = tf.placeholder(tf.float32)
+    savedRecommendationsFile = '../recommendations.txt'
     #name of all categories
     category_names=[]
     #name of all interests
     interest_names=[]
-    #learning rate
-    alpha = 0.0
-    #regularization rate
-    beta = 0.0
+    #selected learning algorithm
+    learning_algorithm=None
     
     def __init__(self, 
                  id=None, 
@@ -64,51 +35,35 @@ class Recommender():
                  credits=(0, float('inf')), 
                  interests=[]):
         self.id = id
-        self.filters = {'time': timeInterval,  #tuple with range of starting time of course
-                        'exam': examType,      #list of acceptable exam types
-                        'place': location,     #list of locations
-                        'credits': credits}    #tuple with range of acceptable credits
+        self.filters = {'time': timeInterval,   #tuple with range of starting time of course
+                        'exam': examType,       #list of acceptable exam types
+                        'place': location,      #list of locations
+                        'credits': credits}     #tuple with range of acceptable credits
+        
         self.interests = interests #list of id's of interests from models.Interests
-            
-    #this algorithm uses a linear classifier to map the interests to categories
-    #returns a sorted list of category_names based on the interests of the student
-    def __algorithm1(self):
-        # multiply the matrix W with the {0, 1}-vector of interests selected by the student
-        # "linear classifier" style: out = softmax(W*x+b)
-        nrInter = len(self.interest_names) #Interest.objects.count()
-        
-        # 1) check if all interests are in the interests database
-        #    if there is an interest not in the database, add it to db 
-        #    (the increase in dimensions of the weight matrix is handled by the signal)
-        # 2) create boolean vector of positions of interests
-        if not self.interests: #if list is empty
-            x = np.ones((1, nrInter))
-        else:
-            x = np.zeros((1, nrInter))
-            for i in self.interests:
-                if not i in Recommender.interest_names:
-                    print("Interest %s not found in database!" % i)
-                    inp = input("What to do?\nEnter \"add\" to add to database or press ENTER to skip interest... ")
-                    if inp == "add":
-                        #interest not in database, add it...
-                        Interest.objects.create(name=i)
-                        x = np.append(x, [[1]], axis=1)
+        #handle interests that are not in the database
+        for i in self.interests[:]:
+            if not i in Recommender.interest_names:
+                print("Interest %s not found in database!" % i)
+                inp = input("What to do?\nEnter \"add\" to add to database or press ENTER to skip interest... ")
+                if inp == "add":
+                    #interest not in database, add it...
+                    Interest.objects.create(name=i)
                 else:
-                    x[0, Recommender.interest_names.index(i)] = 1
-
-        #linear classifier: res = softmax(W*x+b); 
-        self.input = x
-        op = tf.nn.softmax(tf.add(tf.matmul(Recommender.x, Recommender.W), Recommender.b));
-        #FIXME: problem with multithreadding; just one global session???
-        output = Recommender.session.run(op, {Recommender.x: self.input}); output = output[0]
+                    #if not added in the database, remove it from list
+                    self.interests.remove(i)
         
-        sortedIndices = sorted(range(len(Recommender.category_names)), key=lambda k: output[k], reverse=True)
-        return [Recommender.category_names[i] for i in sortedIndices], [output[i] for i in sortedIndices]
+        self.algorithm = Recommender.learning_algorithm(self)
     
     #apply learning algorithm to map the selected interests to categories
     #returns sorted list of category_names according to the user interests
     def __getCategoriesFromInterests(self):
-        categories_sorted, probs = self.__algorithm1()
+        res = self.algorithm.run_algorithm(eval=True)
+        probs = res['eval'][0]
+        sortedIndices = sorted(range(len(Recommender.category_names)), key=lambda k: probs[k], reverse=True)
+        categories_sorted = [Recommender.category_names[i] for i in sortedIndices]
+        probs[:] = [probs[i] for i in sortedIndices]
+        
         nrCategs = len(categories_sorted)
         threshold = 0.1 if nrCategs > 100 else 0.2 if nrCategs > 50 else 0.5 if nrCategs > 20 else 1
         threshold = int(threshold*len(categories_sorted))
@@ -163,27 +118,14 @@ class Recommender():
         nrInter = len(interests)
         #print("Number of interests = ", nrInter, sep='')
         
-        #normalize the data: column sum must be 1!!! why??? -> linear classifier...
-        #W = np.random.normal(loc=0.0, scale=1.0, size=(nrCateg, nrInter))
-        #W = normalizeProbabilitiesCol(W)
-        
-        Recommender.W = tf.Variable(tf.random_normal([nrInter, nrCateg], mean=0, stddev=1), validate_shape=False) #weights
-        Recommender.b = tf.Variable(tf.random_normal([nrCateg], mean=0, stddev=1), validate_shape=False) #biases
-        #print("Recommender.W = ", Recommender.W, sep='')
-        #print("Recommender.b = ", Recommender.b, sep='')
-        config = tf.ConfigProto()
-        config.gpu_options.allow_growth = True
-        Recommender.session = tf.Session(config=config)
-        Recommender.session.run(tf.global_variables_initializer())
-        
         Recommender.category_names = [c.name for c in categories]
         #print("Recommender.category_names = ", Recommender.category_names, sep='')
         Recommender.interest_names = [i.name for i in interests]
         #print("Recommender.interest_names = ", Recommender.interest_names, sep='')
-        Recommender.alpha = 0.5
-        #print("Recommender.alpha = ", Recommender.alpha, sep='')
-        Recommender.beta = 0.01
-        #print("Recommender.beta = ", Recommender.beta, sep='')
+        
+        Recommender.learning_algorithm = LinearClassifier
+        Recommender.learning_algorithm.initialize(num_interests=nrInter, num_categories=nrCateg)
+        
         print("Recommender initialized")
     
     def updateFilters(self, timeInterval=None, location=None, examType=None, credits=None, categories=None, interests=None):
@@ -203,8 +145,8 @@ class Recommender():
     def recommend(self):
         # map the interests to the module categories (learning algorithm 1)
         selected_categories, probabilities = self.__getCategoriesFromInterests()
-        print(selected_categories, probabilities, sep='\n')
-        self.filters['categories'] = selected_categories
+        #print(selected_categories, probabilities, sep='\n')
+        self.filters['categories'] = copy.deepcopy(selected_categories)
         
         # apply the filters on the list of modules (use objects.filter(...))
         modules = self.__filterModules()
@@ -215,43 +157,37 @@ class Recommender():
         return self.__sortModules(modules)
     
     def incorporateFeedback(self, modules_dict):
-        try:
-            #list of selected module (-> selected by the student)
-            selected_modules = [Module.objects.get(title=modules_dict['selected'])]
-        except Module.DoesNotExist:
-            #list of interesting modules (-> selected by the student)
-            selected_modules = [Module.objects.get(title=t).val for t in modules_dict['interesting']]
-        
-        # get category names of the selected_modules and create "correct label" for this query
-        #selected_categories = {c.name for m in selected_modules for c in m.categories.all()};
-        selected_categories = [c.name for m in selected_modules for c in m.categories.all()];
-        self.label = normalizeProbabilitiesCol(np.array([selected_categories.count(name) for name in Recommender.category_names]))
-        
-        #update the weights...
-        op = tf.nn.softmax(tf.add(tf.matmul(Recommender.x, Recommender.W), Recommender.b))
-        loss = tf.reduce_sum(tf.square(op - Recommender.y)) + Recommender.beta * tf.nn.l2_loss(Recommender.W) #add regularization
-        optimizer = tf.train.GradientDescentOptimizer(learning_rate=Recommender.alpha)
-        train = optimizer.minimize(loss)        
-        #print(Recommender.session.run([Recommender.W, Recommender.b]))
-        #print("loss = ", Recommender.session.run(loss, {Recommender.x: self.input, Recommender.y: self.label}))
-        Recommender.session.run(train, {Recommender.x: self.input, Recommender.y: self.label})        
+        self.feedback = copy.deepcopy(modules_dict)
+        self.algorithm.run_algorithm(train=True)
+        self.save()
     
     def save(self):
-        #TODO!!!
-        #what do save? what are relevant information needed to retrain the system?
-        #filters, myRecomandation, userFeedback
-        pass
-    
+        with open(Recommender.savedRecommendationsFile, "a") as file:
+            rec_serialized = json.dumps(self, cls=HandleRecommender)
+            file.write(rec_serialized + "\n")
+        
     def get_json_from_recommendation(rec):
+        filters = copy.deepcopy(rec.filters)
+        format = '%H:%M'; timeInterval = filters['time']
+        filters['time'] = (timeInterval[0].strftime(format), timeInterval[1].strftime(format))
+        
+        feedback = copy.deepcopy(getattr(rec, 'feedback', {}))
+        for key, value in feedback.items():
+            #save the id of the modules
+            if isinstance(value, Module):
+                feedback[key] = value.id 
+            elif isinstance(value, list):
+                feedback[key] = [m.id for m in value]
+            elif value is None:
+                    feedback[key] = value
+            else:
+                raise Exception("Cannot create json object for (key, value) pair: (", repr(key), ", ", repr(value), ")")
+        
         json_object = {}
+        json_object['feedback'] = feedback
+        json_object['filters'] = filters
         json_object['id'] = rec.id
-        import copy
-        d = copy.deepcopy(rec.filters)
-        format = '%H:%M'; timeInterval = rec.filters['time']
-        d['time'] = (timeInterval[0].strftime(format), timeInterval[1].strftime(format))
-        json_object['filters'] = d
-        json_object['interests'] = rec.interests
-        json_object['input'] = rec.input.tolist()
+        json_object['interests'] = copy.deepcopy(rec.interests)
         return json_object
     
     def get_recommendation_from_json(json_object):
@@ -284,19 +220,23 @@ class Recommender():
         if 'interests' in cleanup_json_object:
             #list of strings
             r.updateFilters(interests=cleanup_json_object['interests'])
-        if 'input' in json_object:
-            #numpy array...
-            r.input = np.array(cleanup_json_object['input'])
+        if 'feedback' in cleanup_json_object:
+            #(module id) dictionary
+            feedback = cleanup_json_object['feedback']
+            for key, value in feedback.items():
+                #save the id of the modules
+                if isinstance(value, int):
+                    feedback[key] = Module.objects.get(id=value)
+                elif isinstance(value, list):
+                    feedback[key] = [Module.objects.get(id=i) for i in value]
+                elif value is None:
+                    feedback[key] = value
+                else:
+                    raise Exception("Cannot re-create recommendation object for (key, value) pair: (", repr(key), ", ", repr(value), ")")
+            r.feedback = feedback
             
         return r
     
-    def getWeights():
-        temp_W = tf.slice(Recommender.W, begin=[0, 0], size=tf.shape(Recommender.W))
-        temp_b = tf.slice(Recommender.b, begin=[0], size=tf.shape(Recommender.b))
-        value_W = Recommender.session.run(temp_W)
-        value_b = Recommender.session.run(temp_b)
-        return value_W, value_b
-
 
 @receiver(pre_save, sender=Category)
 def insertCategorySignalHandler(sender, **kwargs):
@@ -307,11 +247,7 @@ def insertCategorySignalHandler(sender, **kwargs):
         return
     
     #if category isn't in database, an insert was performed
-    value_W, value_b = Recommender.getWeights()
-    value_W = np.append(value_W, np.random.normal(size=[value_W.shape[0]]), axis=1) #add column to weight matrix
-    value_b = np.append(value_b, np.random.normal(size=[1]), axis=0) #add row to bias
-    Recommender.session.run(tf.assign(Recommender.W, value_W, validate_shape=False)) #reassign variable
-    Recommender.session.run(tf.assign(Recommender.b, value_b, validate_shape=False)) #reassign variable
+    Recommender.learning_algorithm.updateWeights(UpdateType.INSERT_CATEGORY)
     Recommender.category_names.append(category.name)
 
 @receiver(pre_delete, sender=Category)
@@ -321,11 +257,7 @@ def deleteCategorySignalHandler(sender, **kwargs):
     #get the index of the category in the category list
     #and delete the index'th column from weight and the index'th row from bias
     index = Recommender.category_names.index(category.name)
-    value_W, value_b = Recommender.getWeights()
-    value_W = np.delete(value_W, index, axis=1)
-    value_b = np.delete(value_b, index, axis=0)
-    Recommender.session.run(tf.assign(Recommender.W, value_W, validate_shape=False)) #reassign variable
-    Recommender.session.run(tf.assign(Recommender.b, value_b, validate_shape=False)) #reassign variable
+    Recommender.learning_algorithm.updateWeights(UpdateType.DELETE_CATEGORY, index)
     Recommender.category_names.remove(category.name)
 
 @receiver(pre_save, sender=Interest)
@@ -337,9 +269,7 @@ def insertInterestSignalHandler(sender, **kwargs):
         return
     
     #if interest isn't in database, an insert was performed
-    value_W = Recommender.getWeights()
-    value_W = np.append(value_W, np.random.normal(size=[value_W.shape[1]]), axis=0) #add row to weight matrix
-    Recommender.session.run(tf.assign(Recommender.W, value_W, validate_shape=False)) #reassign variable
+    Recommender.learning_algorithm.updateWeights(UpdateType.INSERT_INTEREST)
     Recommender.interest_names.append(interest.name)
 
 @receiver(pre_delete, sender=Interest)
@@ -349,7 +279,5 @@ def deleteInterestSignalHandler(sender, **kwargs):
     #get the index of the interest in the interest list
     #and delete the index'th row from weight
     index = Recommender.interest_names.index(interest.name)
-    value_W = Recommender.getWeights()
-    value_W = np.delete(value_W, index, axis=0)
-    Recommender.session.run(tf.assign(Recommender.W, value_W, validate_shape=False)) #reassign variable
+    Recommender.learning_algorithm.updateWeights(UpdateType.DELETE_INTEREST, index)
     Recommender.interest_names.remove(interest.name)
