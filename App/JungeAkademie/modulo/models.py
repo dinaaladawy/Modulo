@@ -1,5 +1,5 @@
 from django.db import models
-import sys
+import sys, json
 
 # Create your models here.
 
@@ -71,6 +71,13 @@ class Category(models.Model):
     class Meta:
         ordering = ('name',)
 
+class HandleModule(json.JSONEncoder):
+     """ json.JSONEncoder extension: handle Module """
+     def default(self, obj):
+         if isinstance(obj, Module) or all([isinstance(m, Module) for m in obj]):
+             return Module.get_json_from_modules(obj)
+         return json.JSONEncoder.default(self, obj)
+
 class Module(models.Model):
     #title, prof, time, place (F, G, H, I), exam, credits, categoryList (5 elem) -> Many-to-many relationship
     EXAM_TYPES = ((Exam.WRITTEN_EXAM, 'Written exam'), \
@@ -141,6 +148,28 @@ class Module(models.Model):
     
     def __ne__(self, other):
         return not self == other
+    
+    def module_details(self):
+        return "More details on module %s coming soon to a web browser near you..." % self.title
+    
+    def get_json_from_modules(module):
+        json_object = None
+        if isinstance(module, Module):
+            json_object = module.id
+        elif isinstance(module, list):
+            json_object = [m.id for m in module]
+        else:
+            raise Exception("Unknown type for module:", module)
+        return json_object
+    
+    def get_modules_from_json(json_object):
+        cleanup_json_object = json.loads(json_object)
+        if isinstance(cleanup_json_object, int):
+            return Module.objects.get(id=cleanup_json_object)
+        elif isinstance(cleanup_json_object, list):
+            return [Module.objects.get(id=m_id) for m_id in cleanup_json_object]
+        else:
+            raise Exception("Unknown type for json_object:", json_object)
 
     class Meta:
         ordering = ('title', 'credits', 'time', 'id',)

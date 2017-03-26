@@ -1,0 +1,22 @@
+{% extends "./main_template.html" %}
+{% block title %}
+	Modulo Homepage
+{% endblock %}
+
+{% block header %}
+	Welcome to the Modulo: recommender system for elective modules
+{% endblock %}
+
+{% block content %}
+	Hello, world. You are at the Modulo:recommender system homepage.
+	<form action="{% url 'modulo:modulo-recommender' %}" method="get">
+		<ul>
+			<input type="submit" id="new_rec" value="Get a recommendation" />
+		</ul>
+	</form>
+	<form action="{% url 'modulo:modulo-documentation' %}" method="get">
+		<ul>
+			<input type="submit" id="go_to_doc" value="Read the documentation" />
+		</ul>
+	</form>
+{% endblock %}

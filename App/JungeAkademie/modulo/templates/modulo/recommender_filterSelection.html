@@ -1,0 +1,21 @@
+<h1>Select your filters</h1>
+
+{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+
+<form action="{% url 'modulo:modulo-recommend' %}" method="post">
+	{% csrf_token %}
+	{{ form.as_p }}
+	
+	{% comment %}
+	{% for field in form %}
+		<div class="fieldWrapper">
+			{{ field.errors }}
+			{{ field.label_tag }} {{ field }}
+			{% if field.help_text %}
+				<p class="help">{{ field.help_text | safe }}</p>
+			{% endif %}
+		</div>
+	{% endfor %}
+	{% endcomment %}
+	<input type="submit" value="Get course recommendation" />
+</form>

@@ -1,0 +1,110 @@
+<h1>This is the feedback you provided until now</h1>
+
+{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+
+<!--
+<form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" method="post">
+<button type="button" name="MyButton" value="clicked" onclick="alert('Are you sure you want to click here?')">Click Me!</button>
+<input type="submit" name="ButtonCheck" value="Deselect module" />
+</form>
+-->
+
+{% if selected_module %}
+	<strong>Selected module:</strong> <u>{{ selected_module }}</u><br>
+	{% if selected_module in details %}
+		More details on module {{ selected_module }} coming soon to a web browser near you...<br>
+	{% endif %}
+	<form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" style="display: inline;" method="post">
+		{% csrf_token %}
+		<input type="radio" name="selected_module_{{ selected_module }}" id="selected_module_feedback" value="interesting" />
+		<label for="selected_module_feedback">Deselect module</label><br>
+		<input type="submit" value="Update feedback" />
+	</form>
+	<form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" style="display: inline;" method="post">
+		{% csrf_token %}
+		{% if selected_module in details %}
+			<input type="submit" name="details{{ selected_module }}" value="Hide details"><br>
+		{% else %}
+			<input type="submit" name="details{{ selected_module }}" value="More details"><br>
+		{% endif %}
+	</form>
+	<br>
+{% endif %}
+
+{% if interesting_modules %}
+	<strong>Interesting modules:</strong><br>
+	{% for m in interesting_modules %}
+		<u>{{ m }}</u><br>
+		{% if m in details %}
+			More details on module {{ m }} coming soon to a web browser near you...<br>
+		{% endif %}
+		<form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" style="display: inline;" method="post">
+			{% csrf_token %}
+			<input type="radio" name="interesting_module_{{ m }}" id="interesting_module_feedback_select_{{ m }}" value="selected" />
+			<label for="interesting_module_feedback_select_{{ m }}">Select module</label>
+			<input type="radio" name="interesting_module_{{ m }}" id="interesting_module_feedback_not_for_me{{ m }}" value="not_for_me" />
+			<label for="interesting_module_feedback_not_for_me{{ m }}">Not-for-me module</label><br>
+			<input type="submit" value="Update feedback" />
+		</form>
+		<form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" style="display: inline;" method="post">
+			{% csrf_token %}
+			{% if m in details %}
+				<input type="submit" name="details{{ m }}" value="Hide details"><br>
+			{% else %}
+				<input type="submit" name="details{{ m }}" value="More details"><br>
+			{% endif %}
+		</form>
+	{% endfor %}
+	<br>
+{% endif %}
+
+{% if not_for_me_modules %}
+	<strong>Not-for-me modules:</strong><br>
+	{% for m in not_for_me_modules %}
+		<u>{{ m }}</u><br>
+		{% if m in details %}
+			More details on module {{ m }} coming soon to a web browser near you...<br>
+		{% endif %}
+		<form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" style="display: inline;" method="post">
+			{% csrf_token %}
+			<input type="radio" name="not_for_me_module_{{ m }}" id="not_for_me_module_feedback_select_{{ m }}" value="selected" />
+			<label for="not_for_me_module_feedback_select_{{ m }}">Select module</label>
+			<input type="radio" name="not_for_me_module_{{ m }}" id="not_for_me_module_feedback_interesting_{{ m }}" value="interesting" />
+			<label for="not_for_me_module_feedback_interesting_{{ m }}">Interesting module</label><br>
+			<input type="submit" value="Update feedback" />
+		</form>
+		<form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" style="display: inline;" method="post">
+			{% csrf_token %}
+			{% if m in details %}
+				<input type="submit" name="details{{ m }}" value="Hide details"><br>
+			{% else %}
+				<input type="submit" name="details{{ m }}" value="More details"><br>
+			{% endif %}
+		</form>
+	{% endfor %}
+	<br>
+{% endif %}
+
+{% if seen_modules %}
+	<strong>Seen modules:</strong><br>
+	{% for m in seen_modules %}
+		<u>{{ m }}</u><br>
+	{% endfor %}
+	<br>
+{% endif %}
+
+{% if not_seen_modules %}
+	<strong>Not seen modules:</strong><br>
+	{% for m in not_seen_modules %}
+		<u>{{ m }}</u><br>
+	{% endfor %}
+	<br>
+{% endif %}
+
+<form action="{% url 'modulo:modulo-recommender' displayModules state id %}" method="get">
+	<input type="submit" value="View recommendation" />
+</form>
+<form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" method="post">
+	{% csrf_token %}
+	<input type="submit" name="submitFeedback" value="Submit feedback" />
+</form>

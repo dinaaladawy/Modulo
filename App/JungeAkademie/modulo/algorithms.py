@@ -81,10 +81,10 @@ class LinearClassifier(LearningAlgorithm):
     def __getLabel(self, allCategories):
         try:
             #list of selected module (-> selected by the student)
-            selected_modules = [Module.objects.get(title=self.rec.feedback['selected'])]
+            selected_modules = [Module.objects.get(title=self.rec.feedback['selectedModule'])]
         except Module.DoesNotExist:
             #list of interesting modules (-> selected by the student)
-            selected_modules = [Module.objects.get(title=t) for t in self.rec.feedback['interesting']]
+            selected_modules = [Module.objects.get(title=t) for t in self.rec.feedback['interestingModules']]
         
         # get category names of the selected_modules and create "correct label" for this query
         #selected_categories = {c.name for m in selected_modules for c in m.categories.all()};
