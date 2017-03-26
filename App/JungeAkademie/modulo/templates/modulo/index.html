@@ -1,9 +1,22 @@
-{% if latest_question_list %}
-    <ul>
-    {% for question in latest_question_list %}
-        <li><a href="/polls/{{ question.id }}/">{{ question.question_text }}</a></li>
-    {% endfor %}
-    </ul>
-{% else %}
-    <p>No polls are available.</p>
-{% endif %}
+{% extends "./main_template.html" %}
+{% block title %}
+	Modulo Homepage
+{% endblock %}
+
+{% block header %}
+	Welcome to the Modulo: recommender system for elective modules
+{% endblock %}
+
+{% block content %}
+	Hello, world. You are at the Modulo:recommender system homepage.
+	<form action="{% url 'modulo:modulo-recommender' %}" method="get">
+		<ul>
+			<input type="submit" id="new_rec" value="Get a recommendation" />
+		</ul>
+	</form>
+	<form action="{% url 'modulo:modulo-documentation' %}" method="get">
+		<ul>
+			<input type="submit" id="go_to_doc" value="Read the documentation" />
+		</ul>
+	</form>
+{% endblock %}

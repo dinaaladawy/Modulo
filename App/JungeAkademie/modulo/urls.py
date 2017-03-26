@@ -16,41 +16,41 @@ Including another URLconf
 """
 
 from django.conf.urls import include, url
-from . import views
+from . import views, views_documentation, views_recommendation
 
 app_name = 'modulo'
 
 module_patterns = [
-    url(r'^$', views.module_index, name='modulo-module'),
-    url(r'^(?P<module_title>["\'\w\s\-\.?!():&,_/]+)$', views.module, name='modulo-module-title'),
+    url(r'^$', views_documentation.module_index, name='modulo-module'),
+    url(r'^(?P<module_title>["\'\w\s\-\.?!():&,_/]+)$', views_documentation.module, name='modulo-module-title'),
 ]
 
 category_patterns = [
-    url(r'^$', views.category_index, name='modulo-category'),
-    url(r'^(?P<category_name>[\w\s\-]+)$', views.category, name='modulo-category-name'),
+    url(r'^$', views_documentation.category_index, name='modulo-category'),
+    url(r'^(?P<category_name>[\w\s\-]+)$', views_documentation.category, name='modulo-category-name'),
 ]
 
 interest_patterns = [
-    url(r'^$', views.interest_index, name='modulo-interest'),
-    url(r'^(?P<interest_name>[\w\s\-]+)$', views.interest, name='modulo-interest-name'),
+    url(r'^$', views_documentation.interest_index, name='modulo-interest'),
+    url(r'^(?P<interest_name>[\w\s\-]+)$', views_documentation.interest, name='modulo-interest-name'),
 ]
 
 documentation_patterns = [
-    url(r'^$', views.documentation, name='modulo-documentation'),
+    url(r'^$', views_documentation.documentation, name='modulo-documentation'),
     url(r'^category/', include(category_patterns)),
     url(r'^interest/', include(interest_patterns)),
     url(r'^module/', include(module_patterns)), 
 ]
 
 recommender_patterns = [
-    url(r'^$', views.recommend, name='modulo-recommend'),
-    url(r'^recommendation/$', views.recommendation, name='modulo-recommendation'),
-    url(r'^recommendation/(?P<recommendation_id>\d+)$', views.recommendation, name='modulo-recommendation'),
-    url(r'^thanks/?$', views.recommender_thanks, name='modulo-recommender-thanks')
+    url(r'^$', views_recommendation.recommender_state_machine, name='modulo-recommender'),    
+    url(r'^(?P<state>\d{1})$', views_recommendation.recommender_state_machine, name='modulo-recommender'),
+    url(r'^(?P<state>\d{1})(?P<prev_state>\d{1})$', views_recommendation.recommender_state_machine, name='modulo-recommender'),
+    url(r'^(?P<state>\d{1})(?P<prev_state>\d{1})(?P<request_id>\d*)$', views_recommendation.recommender_state_machine, name='modulo-recommender'),
 ]
 
 urlpatterns = [
     url(r'^$', views.index, name='modulo-index'),
-    url(r'^recommend/', include(recommender_patterns)),
+    url(r'^recommender/', include(recommender_patterns)),
     url(r'^documentation/', include(documentation_patterns)),
 ]

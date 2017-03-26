@@ -1,0 +1,16 @@
+{% extends "./main_template.html" %}
+{% block title %}
+Modulo: documentation
+{% endblock %}
+
+{% block header %}
+Welcome to the documentation of Modulo
+{% endblock %}
+
+{% block content %}
+	You can check out the database:
+	<ul><a href="{% url 'modulo:modulo-module' %}">Modules</a></ul>
+	<ul><a href="{% url 'modulo:modulo-category' %}">Categories</a></ul>
+	<ul><a href="{% url 'modulo:modulo-interest' %}">Interests</a></ul>
+	<!-- <ul>Test Persons</ul> -->
+{% endblock %}

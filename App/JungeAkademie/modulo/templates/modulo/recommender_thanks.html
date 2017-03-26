@@ -1,6 +1,16 @@
-<h1>Thank you for using the Modulo recommender system!</h1>
+<h1>Thank you for using the Modulo: recommender system!</h1>
 
 <p>You can now:
-	<ul>get a <a href="{% url 'modulo:modulo-recommend' %}">new recommendation</a></ul>
-	<ul>or check the <a href="{% url 'modulo:modulo-documentation' %}">documentation</a></ul>
+	<form action="{% url 'modulo:modulo-recommender' %}" method="get">
+		<ul>
+			<input type="submit" id="new_rec" value="get a new recommendation" />
+			<!-- <label for="new_rec">get a new recommendation</label> -->
+		</ul>
+	</form>
+	<form action="{% url 'modulo:modulo-documentation' %}" method="get">
+		<ul>
+			<input type="submit" id="go_to_doc" value="or check the documentation" />
+			<!-- or check the <a href="{% url 'modulo:modulo-documentation' %}">documentation</a> -->
+		</ul>
+	</form>
 </p>

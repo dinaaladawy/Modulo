@@ -1,0 +1,41 @@
+<h1>Here is your recommendation</h1>
+
+{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+
+{% for module in modules %}
+	<!-- <p> -->
+	<strong><a href="{% url 'modulo:modulo-module-title' module.title %}"> {{ module.title }} </a><strong><br>
+	{% if module.title in details %}
+		{{ module.module_details }}<br>
+	{% endif %}
+	<form action="{% url 'modulo:modulo-recommender' displayModules state id %}" method="post" style="display: inline;">
+		{% csrf_token %}
+		<input type="radio" name="module{{ forloop.counter }}" value="selected" id="select{{ forloop.counter }}"/>
+		<label for="select{{ forloop.counter }}">Select</label>
+		
+		<input type="radio" name="module{{ forloop.counter }}" value="interesting" id="interesting{{ forloop.counter }}" />
+		<label for="interesting{{ forloop.counter }}">Interesting</label>
+		
+		<input type="radio" name="module{{ forloop.counter }}" value="not-for-me" id="not-for-me{{ forloop.counter }}" />
+		<label for="not-for-me{{ forloop.counter }}">Not for me</label><br>
+		
+		<input type="submit" value="Submit feedback" />
+	</form>
+	<form action="{% url 'modulo:modulo-recommender' displayModules state id %}" method="post" style="display: inline;">
+		{% csrf_token %}
+		{% if module.title in details %}
+			<input type="submit" name="details{{ forloop.counter }}" value="Hide details" />
+		{% else %}
+			<input type="submit" name="details{{ forloop.counter }}" value="More details" />
+		{% endif %}
+	</form>
+	<br><br>
+	<!-- </p> -->
+{% endfor %}
+<br>
+<form action="{% url 'modulo:modulo-recommender' updateFilters state id %}" method="get">
+	<input type="submit" value="Update filters" />
+</form>
+<form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" method="get">
+	<input type="submit" value="See feedback" />
+</form>

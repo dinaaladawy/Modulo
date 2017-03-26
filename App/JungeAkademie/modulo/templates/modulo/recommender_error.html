@@ -1,5 +1,22 @@
 <strong>{{ error_msg }}</strong>
 
-<form action="{% url 'modulo:modulo-recommend' %}" method="get"> 
-	<input type="submit" value="Get new recommendation" />
-</form>
+{% if next_action %}
+	{% for a in next_action %}
+	<form action="{% url 'modulo:modulo-recommender' a state id %}" method="get"> 
+		{% if a == 0 %}
+			<input type="submit" value="Get new recommendation" />
+		{% elif a == 1 %}
+			<input type="submit" value="Display modules" />
+		{% elif a == 2 %}
+			<input type="submit" value="Update filters" />
+		{% elif a == 3 %}
+			<input type="submit" value="See feedback" />
+		{% else %}
+		{% endif %}
+	</form>
+	{% endfor %}
+{% else %}
+	<form action="{% url 'modulo:modulo-recommender' %}" method="get"> 
+		<input type="submit" value="Get new recommendation" />
+	</form>
+{% endif %}

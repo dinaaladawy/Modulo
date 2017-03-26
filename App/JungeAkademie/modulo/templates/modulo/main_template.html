@@ -1,0 +1,27 @@
+<html>
+	<head>
+		<title>
+			{% block title %}
+				Page Title
+			{% endblock %}
+		</title>
+
+		<h1>
+			{% block header %}
+				Page header
+			{% endblock %}
+		</h1>
+
+		<form action={% url 'modulo:modulo-index' %} method="GET">
+			<input type="submit" value="Home" />
+		</form>
+		<!-- <button >Home</button> -->
+		<br>
+	</head>
+	
+	<body>
+		{% block content %}
+			Body content
+		{% endblock %}
+	</body>
+</html>
