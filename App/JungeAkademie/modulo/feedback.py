@@ -28,10 +28,10 @@ class Feedback():
     
     def setFeedback(self):
         modules_dict = {}
-        modules_dict['selected'] = self.selectedModule
-        modules_dict['interesting'] = self.interestingModules
-        modules_dict['notForMe'] = self.notForMeModules
-        modules_dict['seen'] = self.seenModules
-        modules_dict['notSeen'] = self.notSeenModules
+        modules_dict['selectedModule'] = self.selectedModule
+        modules_dict['interestingModules'] = self.interestingModules
+        modules_dict['notForMeModules'] = self.notForMeModules
+        modules_dict['seenModules'] = self.seenModules
+        modules_dict['notSeenModules'] = self.notSeenModules
         self.recommendation.incorporateFeedback(modules_dict)
     

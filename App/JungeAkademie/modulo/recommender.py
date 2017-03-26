@@ -174,10 +174,10 @@ class Recommender():
         feedback = copy.deepcopy(getattr(rec, 'feedback', {}))
         for key, value in feedback.items():
             #save the id of the modules
-            if isinstance(value, Module):
-                feedback[key] = value.id 
+            if isinstance(value, str):
+                feedback[key] = value 
             elif isinstance(value, list):
-                feedback[key] = [m.id for m in value]
+                feedback[key] = [m for m in value]
             elif value is None:
                     feedback[key] = value
             else:
@@ -225,10 +225,10 @@ class Recommender():
             feedback = cleanup_json_object['feedback']
             for key, value in feedback.items():
                 #save the id of the modules
-                if isinstance(value, int):
-                    feedback[key] = Module.objects.get(id=value)
+                if isinstance(value, str):
+                    feedback[key] = Module.objects.get(title=value)
                 elif isinstance(value, list):
-                    feedback[key] = [Module.objects.get(id=i) for i in value]
+                    feedback[key] = [Module.objects.get(title=i) for i in value]
                 elif value is None:
                     feedback[key] = value
                 else:
