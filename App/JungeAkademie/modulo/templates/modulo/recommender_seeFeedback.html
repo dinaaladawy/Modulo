@@ -69,7 +69,7 @@
 			{% csrf_token %}
 			<input type="radio" name="not_for_me_module_{{ m }}" id="not_for_me_module_feedback_select_{{ m }}" value="selected" />
 			<label for="not_for_me_module_feedback_select_{{ m }}">Select module</label>
-			<input type="radio" name="not_for_me_module_{{ m }}" id="not_for_me_module_feedback_select_{{ m }}" value="interesting" />
+			<input type="radio" name="not_for_me_module_{{ m }}" id="not_for_me_module_feedback_interesting_{{ m }}" value="interesting" />
 			<label for="not_for_me_module_feedback_interesting_{{ m }}">Interesting module</label><br>
 			<input type="submit" value="Update feedback" />
 		</form>
