@@ -24,7 +24,7 @@ def getCategory(cell=None):
             return None
 
 def getLocation(cell=None):
-    return Location.NOT_SPECIFIED
+    return None
 
 def getTime(cell=None):
     return datetime.time(hour=0, minute=0, second=0)
@@ -52,33 +52,35 @@ def getCredits(cell=None):
 def getLanguage(cell=None):
     val = []
     if cell.value is None:
-        return [Language.NOT_SPECIFIED]
+        return [None]
     
     if 'german' in cell.value.lower() or 'deutsch' in cell.value.lower():
-        val.append(Language.GERMAN)
+        val.append(Language.objects.get(language__icontains='german'))
     if 'english' in cell.value.lower() or 'englisch' in cell.value.lower():
-        val.append(Language.ENGLISH)
+        val.append(Language.objects.get(language__icontains='english'))
     if val == []:
-        val.append(Language.OTHER)
+        val.append(Language.objects.get(language__icontains='other'))
     return val
 
 def getExam(cell=None):
     val = []
     if cell.value is None:
-        return [Exam.NOT_SPECIFIED], ''
+        return [None], ''
     
     if ('schriftlich' in cell.value.lower() and 'prüfung' in cell.value.lower()) or \
            'klausur' in cell.value.lower() or \
            'exam' in cell.value.lower() or \
             ('written' in cell.value.lower() and 'exam' in cell.value.lower()):
-        val.append(Exam.WRITTEN_EXAM)
+        #val.append(Exam.WRITTEN_EXAM)
+        val.append(Exam.objects.get(exam_type__icontains='written'))
     if 'präsentation' in cell.value.lower() or \
             ('mündlich' in cell.value.lower() and 'prüfung' in cell.value.lower()) or \
             'kolloquium' in cell.value.lower() or \
             'presentation' in cell.value.lower() or \
             'colloquium' in cell.value.lower() or \
             ('oral' in cell.value.lower() and 'exam' in cell.value.lower()):
-        val.append(Exam.ORAL_EXAM)
+        #val.append(Exam.ORAL_EXAM)
+        val.append(Exam.objects.get(exam_type__icontains='oral'))
     '''
     if 'referat' in cell.value.lower() or \
             'paper' in cell.value.lower() or\
@@ -86,37 +88,38 @@ def getExam(cell=None):
         val.append(Exam.PAPER)
     '''
     if val == []:
-        val.append(Exam.OTHER)
+        #val.append(Exam.OTHER)
+        val.append(Exam.objects.get(exam_type__icontains='other'))
     return val, cell.value
 
 def getType(cell=None):
     val = []
     if cell.value is None:
-        return [CourseFormat.NOT_SPECIFIED]
+        return [None]
     
     if 'seminar' in cell.value.lower():
-        val.append(CourseFormat.SEMINAR)
+        val.append(CourseFormat.objects.get(course_format__icontains='seminar'))
     if 'workshop' in cell.value.lower():
-        val.append(CourseFormat.WORKSHOP)
-    if 'kolloquium' in cell.value.lower() or  'colloquium' in cell.value.lower():
-        val.append(CourseFormat.COLLOQUIUM)
+        val.append(CourseFormat.objects.get(course_format__icontains='workshop'))
+    if 'kolloquium' in cell.value.lower() or 'colloquium' in cell.value.lower():
+        val.append(CourseFormat.objects.get(course_format__icontains='colloquium'))
     if 'modul' in cell.value.lower() or 'module' in cell.value.lower():
-        val.append(CourseFormat.MODULE)
+        val.append(CourseFormat.objects.get(course_format__icontains='module'))
     if 'vorlesung' in cell.value.lower() or 'course' in cell.value.lower():
-        val.append(CourseFormat.COURSE)
+        val.append(CourseFormat.objects.get(course_format__icontains='course'))
     if 'übung' in cell.value.lower() or 'exercice' in cell.value.lower():
-        val.append(CourseFormat.EXERCICE)
+        val.append(CourseFormat.objects.get(course_format__icontains='exercice'))
     if 'exkursion' in cell.value.lower() or 'excursion' in cell.value.lower():
-        val.append(CourseFormat.EXCURSION)
+        val.append(CourseFormat.objects.get(course_format__icontains='excursion'))
     if 'vortragsreihe' in cell.value.lower() or 'presentation' in cell.value.lower():
-        val.append(CourseFormat.PRESENTATION)
+        val.append(CourseFormat.objects.get(course_format__icontains='presentation'))
     if val == []:
-        val.append(CourseFormat.NOT_SPECIFIED)
+        val.append(CourseFormat.objects.get(course_format__icontains='other'))
     return val
 
 def updateOrCreateModule(attr, row):
     #primary key???!!!
-    #title, exam, credits, language, place
+    #title, exam, credits, language, location
     
     defaults = {}
     categoryList = []
@@ -150,9 +153,9 @@ def updateOrCreateModule(attr, row):
             categoryList.append(getCategory(cell))
         elif 'defaults' in attr[col]:
             #!!!
-            #place and time are not yet in database...
+            #location and time are not yet in database...
             #!!!
-            defaults.update({'place': getLocation(cell)})
+            defaults.update({'location': getLocation(cell)})
             defaults.update({'time': getTime(cell)})
         else:
             #the rest of values are ok to just be copied
@@ -182,9 +185,9 @@ def updateOrCreateModule(attr, row):
         print("Module ", m, " was updated.", sep='')
     return m, updated, created
 
-def insertModules():
-    #workbook = load_workbook(moduleFile, read_only=True)
-    workbook = load_workbook(moduleFile)
+def insertModules(databaseFile):
+    #workbook = load_workbook(databaseFile, read_only=True)
+    workbook = load_workbook(databaseFile)
     worksheet = workbook['modules']
     nrRows = len(tuple(worksheet.rows))
     nrCols = len(tuple(worksheet.columns))
@@ -204,5 +207,6 @@ def insertModules():
     print('Number of modules in database =', len(Module.objects.all()))
     #workbook.close()
     
-insertModules()
-input("Press ENTER to exit program...")
+if __name__ == "__main__":
+    insertModules(moduleFile)
+    input("Press ENTER to exit program...")

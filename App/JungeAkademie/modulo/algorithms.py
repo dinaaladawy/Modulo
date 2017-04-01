@@ -127,11 +127,11 @@ class LinearClassifier(LearningAlgorithm):
             value_W = np.delete(value_W, to_delete_index, axis=0)
             op = tf.assign(LinearClassifier.W, value_W, validate_shape=False)
         elif updateType == UpdateType.INSERT_CATEGORY:
-            value_W = np.append(value_W, np.random.normal(size=[value_W.shape[0]]), axis=1) #add column to weight matrix
+            value_W = np.append(value_W, np.random.normal(size=[value_W.shape[0], 1]), axis=1) #add column to weight matrix
             value_b = np.append(value_b, np.random.normal(size=[1]), axis=0) #add row to bias
             op = [tf.assign(LinearClassifier.W, value_W, validate_shape=False), tf.assign(LinearClassifier.b, value_b, validate_shape=False)]
         elif updateType == UpdateType.INSERT_INTEREST:
-            value_W = np.append(value_W, np.random.normal(size=[value_W.shape[1]]), axis=0) #add row to weight matrix
+            value_W = np.append(value_W, np.random.normal(size=[1, value_W.shape[1]]), axis=0) #add row to weight matrix
             op = tf.assign(LinearClassifier.W, value_W, validate_shape=False)
         else:
             pass

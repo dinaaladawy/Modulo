@@ -18,7 +18,7 @@
 		{% csrf_token %}
 		<input type="radio" name="selected_module_{{ selected_module }}" id="selected_module_feedback" value="interesting" />
 		<label for="selected_module_feedback">Deselect module</label><br>
-		<input type="submit" value="Update feedback" />
+		<input type="submit" name="submit{{ selected_module }}" value="Update feedback" />
 	</form>
 	<form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" style="display: inline;" method="post">
 		{% csrf_token %}
@@ -44,7 +44,8 @@
 			<label for="interesting_module_feedback_select_{{ m }}">Select module</label>
 			<input type="radio" name="interesting_module_{{ m }}" id="interesting_module_feedback_not_for_me{{ m }}" value="not_for_me" />
 			<label for="interesting_module_feedback_not_for_me{{ m }}">Not-for-me module</label><br>
-			<input type="submit" value="Update feedback" />
+			<input type="submit" name="submit{{ m }}" value="Update feedback" />
+			
 		</form>
 		<form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" style="display: inline;" method="post">
 			{% csrf_token %}
@@ -71,7 +72,7 @@
 			<label for="not_for_me_module_feedback_select_{{ m }}">Select module</label>
 			<input type="radio" name="not_for_me_module_{{ m }}" id="not_for_me_module_feedback_interesting_{{ m }}" value="interesting" />
 			<label for="not_for_me_module_feedback_interesting_{{ m }}">Interesting module</label><br>
-			<input type="submit" value="Update feedback" />
+			<input type="submit" name="submit{{ m }}" value="Update feedback" />
 		</form>
 		<form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" style="display: inline;" method="post">
 			{% csrf_token %}
