@@ -42,6 +42,13 @@ documentation_patterns = [
     url(r'^module/', include(module_patterns)), 
 ]
 
+'''
+url(r'^$', views_recommendation.recommender_state_machine, name='modulo-recommend'),
+url(r'^recommendation/?$', views_recommendation.recommendation, name='modulo-recommendation'),
+url(r'^recommendation/(?P<recommendation_id>\d+)$', views_recommendation.recommendation, name='modulo-recommendation'),
+url(r'^thanks/?$', views_recommendation.recommender_thanks, name='modulo-recommender-thanks'),
+url(r'^recommendation/feedback/?$', views_recommendation.recommender_feedback, name='modulo-recommender-feedback'),
+'''
 recommender_patterns = [
     url(r'^$', views_recommendation.recommender_state_machine, name='modulo-recommender'),    
     url(r'^(?P<state>\d{1})$', views_recommendation.recommender_state_machine, name='modulo-recommender'),

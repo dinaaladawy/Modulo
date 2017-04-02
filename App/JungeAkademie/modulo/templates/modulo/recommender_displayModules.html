@@ -19,7 +19,7 @@
 		<input type="radio" name="module{{ forloop.counter }}" value="not-for-me" id="not-for-me{{ forloop.counter }}" />
 		<label for="not-for-me{{ forloop.counter }}">Not for me</label><br>
 		
-		<input type="submit" value="Submit feedback" />
+		<input type="submit" name="submit{{ forloop.counter }}" value="Submit feedback" />
 	</form>
 	<form action="{% url 'modulo:modulo-recommender' displayModules state id %}" method="post" style="display: inline;">
 		{% csrf_token %}
