@@ -240,7 +240,7 @@ class Recommender():
             if 'exam' in filters:
                 #list of strings or none
                 #exam_types = [Exam.objects.get(exam_type__icontains=e) for e in filters['exam']] if isinstance(filters['exam'], list) else Exam.objects.get(exam_type__icontains=filters['exam']) if isinstance(filters['exam'], str) else None
-                exam_types = [Exam.objects.get(exam_type__icontains=e) for e in filters['exam']] if isinstance(filters['exam'], list) else None
+                exam_types = [Exam.objects.get(exam_type__iexact=e) for e in filters['exam']] if isinstance(filters['exam'], list) else None
                 r.updateFilters(examType=exam_types)
             if 'time' in filters:
                 #Tuple of datetime.time
@@ -250,7 +250,7 @@ class Recommender():
             if 'location' in filters:
                 #list of strings or none
                 #locations = [Location.objects.get(location__icontains=l) for l in filters['location']] if isinstance(filters['location'], list) else Location.objects.get(location__icontains=filters['location']) if isinstance(filters['location'], str) else None
-                locations = [Location.objects.get(location__icontains=l) for l in filters['location']] if isinstance(filters['location'], list) else None
+                locations = [Location.objects.get(location__iexact=l) for l in filters['location']] if isinstance(filters['location'], list) else None
                 r.updateFilters(location=locations)
             if 'credits' in filters:
                 #tuple of Integers

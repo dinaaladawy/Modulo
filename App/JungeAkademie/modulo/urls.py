@@ -17,6 +17,7 @@ Including another URLconf
 
 from django.conf.urls import include, url
 from . import views, views_documentation, views_recommendation
+from .autocomplete import ExamAutocomplete, CourseFormatAutocomplete, InterestAutocomplete, LanguageAutocomplete, LocationAutocomplete, PersonalityAutocomplete
 
 app_name = 'modulo'
 
@@ -56,8 +57,18 @@ recommender_patterns = [
     url(r'^(?P<state>\d{1})(?P<prev_state>\d{1})(?P<request_id>\d*)$', views_recommendation.recommender_state_machine, name='modulo-recommender'),
 ]
 
+autocomplete_patterns = [
+    url(r'^exam-autocomplete/$', ExamAutocomplete.as_view(), name='exam-autocomplete'),
+    url(r'^interest-autocomplete/$', InterestAutocomplete.as_view(), name='interest-autocomplete'),
+    url(r'^language-autocomplete/$', LanguageAutocomplete.as_view(), name='language-autocomplete'),
+    url(r'^location-autocomplete/$', LocationAutocomplete.as_view(), name='location-autocomplete'),
+    url(r'^personality-autocomplete/$', PersonalityAutocomplete.as_view(), name='personality-autocomplete'),
+    url(r'^course-format-autocomplete/$', CourseFormatAutocomplete.as_view(), name='course-format-autocomplete'),
+]
+
 urlpatterns = [
     url(r'^$', views.index, name='modulo-index'),
     url(r'^recommender/', include(recommender_patterns)),
+    url(r'^autocomplete/', include(autocomplete_patterns)),
     url(r'^documentation/', include(documentation_patterns)),
 ]
