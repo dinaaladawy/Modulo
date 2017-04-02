@@ -8,6 +8,7 @@ Created on Mon Mar 13 14:11:11 2017
 from .algorithms import UpdateType, LinearClassifier
 from .models import Exam, Location, Interest, Category, Module
 from django.db.models.signals import pre_save, pre_delete
+from django.db import DatabaseError
 from django.dispatch import receiver
 import datetime, json, copy
 
@@ -30,14 +31,14 @@ class Recommender():
     def __init__(self, 
                  id=None, 
                  timeInterval=(datetime.datetime.strptime('00:00', '%H:%M').time(), datetime.datetime.strptime('23:59', '%H:%M').time()), 
-                 location=[Location.NOT_SPECIFIED], 
-                 examType=[Exam.NOT_SPECIFIED], 
-                 credits=(0, float('inf')), 
+                 location=None,
+                 examType=None,
+                 credits=(0, float('inf')),
                  interests=[]):
         self.id = id
         self.filters = {'time': timeInterval,   #tuple with range of starting time of course
                         'exam': examType,       #list of acceptable exam types
-                        'place': location,      #list of locations
+                        'location': location,      #list of locations
                         'credits': credits}     #tuple with range of acceptable credits
         
         self.interests = interests #list of id's of interests from models.Interests
@@ -71,19 +72,41 @@ class Recommender():
     
     #checks if the module is in compliance with the filters
     def __checkModule(self, m):
+        '''
+        print("Checking module", m.title)
+        print("Filters:")
+        for key, value in self.filters.items():
+            print('\tkey = ', key, '; value = ', value, sep='')
+        print('Module:')
+        for key in self.filters.keys():
+            if key != 'categories':
+                print('\tkey = ', key, '; m.', key, ' = ', getattr(m, key), sep='')
+            else:
+                print('\tkey = ', key, '; m.', key, ' = [', sep='', end='')
+                module_value = getattr(m, key)
+                for c in module_value.all():
+                    print(c.name, ', ', sep='', end='')
+                print(']')
+        ''' 
         for key, value in self.filters.items():
             module_value = getattr(m, key)
             if key == 'time':
                 if not (value[0] <= module_value <= value[1]):
+                    #print("Module", m.title, "doesn't respect time filter!")
                     return False
             if key == 'exam':
-                if module_value != Exam.NOT_SPECIFIED and module_value != value:
+                #if module_value != Exam.NOT_SPECIFIED and module_value not in value:
+                if module_value is not None and value is not None and module_value not in value:
+                    #print("Module", m.title, "doesn't respect exam filter!")
                     return False
-            if key == 'place':
-                if module_value != Location.NOT_SPECIFIED and module_value not in value:
+            if key == 'location':
+                #if module_value != Location.NOT_SPECIFIED and module_value not in value:
+                if module_value is not None and value is not None and module_value not in value:
+                    #print("Module", m.title, "doesn't respect location filter!")
                     return False
             if key == 'credits':
                 if module_value != 0.0 and not (value[0] <= module_value <= value[1]):
+                    #print("Module", m.title, "doesn't respect credits filter!")
                     return False
             if key == 'categories':
                 module_category_in_selected_categories = False or (module_value.all().count() == 0)
@@ -92,13 +115,16 @@ class Recommender():
                         module_category_in_selected_categories = True
                         break
                 if not module_category_in_selected_categories:
+                    #print("Module", m.title, "doesn't respect categories filter!")
                     return False
+        #print("Module", m.title, "respects the filters!")
         return True
     
-    #apply the filters (categories_sorted, time, place, exam, etc.) on the modules
+    #apply the filters (categories_sorted, time, location, exam, etc.) on the modules
     #return list of modules (not just module titles...) matching all filters...
     def __filterModules(self):
         return [m for m in Module.objects.all() if self.__checkModule(m)]
+        #return [m for m in Module.objects.filter(id__range=(0, 15)) if self.__checkModule(m)]
         
     #sort the selected/filtered modules according to relevance
     #return sorted list of modules (not module titles, actual modules...)
@@ -109,12 +135,18 @@ class Recommender():
     def initialize():
         #print("Initializing the weight matrix of the recommender system!")
         #get the number of categories in the database
-        categories = list(Category.objects.all())
+        try:
+            categories = list(Category.objects.all())
+        except DatabaseError:
+            categories = []
         nrCateg = len(categories)
         #print("Number of categories = ", nrCateg, sep='')
         
         #get the number of interests in the database
-        interests = list(Interest.objects.all())
+        try:
+            interests = list(Interest.objects.all())
+        except DatabaseError:
+            interests = []
         nrInter = len(interests)
         #print("Number of interests = ", nrInter, sep='')
         
@@ -132,7 +164,7 @@ class Recommender():
         if timeInterval is not None:
             self.filters['time'] = timeInterval
         if location is not None:
-            self.filters['place'] = location
+            self.filters['location'] = location
         if examType is not None:
             self.filters['exam'] = examType
         if credits is not None:
@@ -170,6 +202,12 @@ class Recommender():
         filters = copy.deepcopy(rec.filters)
         format = '%H:%M'; timeInterval = filters['time']
         filters['time'] = (timeInterval[0].strftime(format), timeInterval[1].strftime(format))
+        e = filters['exam']
+        #filters['exam'] = [exam.exam_type for exam in e] if isinstance(e, list) else e.exam_type if isinstance(e, Exam) else None
+        filters['exam'] = [exam.exam_type for exam in e] if isinstance(e, list) else None
+        l = filters['location']
+        #filters['location'] = [loc.location for loc in l] if isinstance(l, list) else l.location if isinstance(l, Location) else None
+        filters['location'] = [loc.location for loc in l] if isinstance(l, list) else None
         
         feedback = copy.deepcopy(getattr(rec, 'feedback', {}))
         for key, value in feedback.items():
@@ -200,16 +238,20 @@ class Recommender():
         if 'filters' in cleanup_json_object:
             filters = cleanup_json_object['filters']
             if 'exam' in filters:
-                #Integer
-                r.updateFilters(examType=filters['exam'])
+                #list of strings or none
+                #exam_types = [Exam.objects.get(exam_type__icontains=e) for e in filters['exam']] if isinstance(filters['exam'], list) else Exam.objects.get(exam_type__icontains=filters['exam']) if isinstance(filters['exam'], str) else None
+                exam_types = [Exam.objects.get(exam_type__icontains=e) for e in filters['exam']] if isinstance(filters['exam'], list) else None
+                r.updateFilters(examType=exam_types)
             if 'time' in filters:
                 #Tuple of datetime.time
                 format = '%H:%M'
                 timeInterval = (datetime.datetime.strptime(filters['time'][0], format).time(), datetime.datetime.strptime(filters['time'][1], format).time())
                 r.updateFilters(timeInterval=timeInterval)
-            if 'place' in filters:
-                #Integer
-                r.updateFilters(location=filters['place'])
+            if 'location' in filters:
+                #list of strings or none
+                #locations = [Location.objects.get(location__icontains=l) for l in filters['location']] if isinstance(filters['location'], list) else Location.objects.get(location__icontains=filters['location']) if isinstance(filters['location'], str) else None
+                locations = [Location.objects.get(location__icontains=l) for l in filters['location']] if isinstance(filters['location'], list) else None
+                r.updateFilters(location=locations)
             if 'credits' in filters:
                 #tuple of Integers
                 credit_tuple = (filters['credits'][0], filters['credits'][1])

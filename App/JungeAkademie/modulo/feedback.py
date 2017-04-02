@@ -5,10 +5,13 @@ Created on Mon Mar 13 14:11:11 2017
 @author: Andrei
 """
 
+from django.db.models import F
+from .models import Module
+
 class Feedback():    
     def __init__(self, recommendation, selectedModule=None, interestingModules=[], notForMeModules=[], seenModules=[], notSeenModules=[]):
         self.recommendation = recommendation
-        self.selectedModule = None
+        self.selectedModule = selectedModule
         self.interestingModules = interestingModules
         self.notForMeModules = notForMeModules
         self.seenModules = seenModules
@@ -34,4 +37,7 @@ class Feedback():
         modules_dict['seenModules'] = self.seenModules
         modules_dict['notSeenModules'] = self.notSeenModules
         self.recommendation.incorporateFeedback(modules_dict)
-    
+        if self.selectedModule is not None:
+            m = Module.objects.get(title=self.selectedModule)
+            #m.selected = F('selected') + 1
+            m.save()

@@ -3,55 +3,76 @@ import sys, json
 
 # Create your models here.
 
-class Exam():
-    WRITTEN_EXAM = 0
-    ORAL_EXAM = 1
-    #PAPER = 2
-    OTHER = 3
-    NOT_SPECIFIED = 4
+class Exam(models.Model):
+    #WRITTEN_EXAM = 'Written exam'
+    #ORAL_EXAM = 'Oral exam'
+    #OTHER = 'Other'
+    NOT_SPECIFIED = 'Not specified'
+    exam_type = models.CharField(primary_key=True, max_length=100, default=None)
     
-class Location():
-    FREISING = 0
-    GARCHING = 1
-    GARCHING_HOCHBRÜCK = 2
-    INNER_CITY = 3
-    OTHER = 4
-    NOT_SPECIFIED = 5
-
-class Personality():
-    STRICT = 0
-    LOOSE = 1
-    CURIOUS = 2
-    CREDIT_ORIENTED = 3
-    LAZY = 4
-    NERD = 5
-    DO_IT_ALL = 6
-    TIME_PRESSURED = 7
-    DETAIL_ORIENTED = 8
-    ANYTHING_WORKS = 9
-    EASY_EXAM = 10
-    ONLY_WRITTEN_EXAM = 11
-    THE_HARDER_THE_BETTER = 12
-
-class CourseFormat():
-    SEMINAR = 0
-    WORKSHOP = 1
-    COLLOQUIUM = 2
-    MODULE = 3
-    COURSE = 4
-    EXERCICE = 5
-    EXCURSION = 6
-    PRESENTATION = 7
-    OTHER = 8
-    NOT_SPECIFIED = 9
+    def __str__(self):
+        return self.exam_type
     
-class Language():
-    ENGLISH = 'EN'
-    GERMAN = 'DE'
-    OTHER = '??'
-    NOT_SPECIFIED = ''
+class CourseFormat(models.Model):
+    #SEMINAR = 'Seminar'
+    #WORKSHOP = 'Workshop'
+    #COLLOQUIUM = 'Colloquium'
+    #MODULE = 'Module'
+    #COURSE = 'Course'
+    #EXERCICE = 'Exercice'
+    #EXCURSION = 'Excursion'
+    #PRESENTATION = 'Presentation'
+    #OTHER = 'Other'
+    NOT_SPECIFIED = 'Not specified'
+    course_format = models.CharField(primary_key=True, max_length=100, default=None)
+    
+    def __str__(self):
+        return self.course_format
+    
+class Language(models.Model):
+    #ENGLISH = 'English'
+    #GERMAN = 'German'
+    #OTHER = 'Other'
+    NOT_SPECIFIED = 'Not specified'
+    language = models.CharField(primary_key=True, max_length=100, default=None)
+    
+    def __str__(self):
+        return self.language
 
-class Interest(models.Model):
+class Location(models.Model):
+    #FREISING = 'Freising'
+    #GARCHING = 'Garching'
+    #GARCHING_HOCHBRÜCK = 'Garching-Hockbrück'
+    #INNER_CITY = 'Inner city'
+    #OTHER = 'Other'
+    NOT_SPECIFIED = 'Not specified'
+    location = models.CharField(primary_key=True, max_length=500, default=None)
+    
+    def __str__(self):
+        return self.location
+
+class Personality(models.Model):
+    #STRICT = 'Strict'
+    #LOOSE = 'Loose'
+    #CURIOUS = 'Curious'
+    #CREDIT_ORIENTED = 'Credit oriented'
+    #LAZY = 'Lazy'
+    #NERD = 'Nerd'
+    #DO_IT_ALL = 'Do it all'
+    #TIME_PRESSURED = 'Time pressured'
+    #DETAIL_ORIENTED = 'Detail oriented'
+    #ANYTHING_WORKS = 'Anything works'
+    #EASY_EXAM = 'Easy exam'
+    #ONLY_WRITTEN_EXAM = 'Only written exam'
+    #THE_HARDER_THE_BETTER = 'The harder, the better'
+    #OTHER = 'Other'
+    NOT_SPECIFIED = 'Not specified'
+    personality = models.CharField(primary_key=True, max_length=200, default=None)    
+    
+    def __str__(self):
+        return self.personality
+
+class Category(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100, default='')
     
@@ -61,7 +82,7 @@ class Interest(models.Model):
     class Meta:
         ordering = ('name',)
 
-class Category(models.Model):
+class Interest(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100, default='')
     
@@ -80,39 +101,16 @@ class HandleModule(json.JSONEncoder):
 
 class Module(models.Model):
     #title, prof, time, place (F, G, H, I), exam, credits, categoryList (5 elem) -> Many-to-many relationship
-    EXAM_TYPES = ((Exam.WRITTEN_EXAM, 'Written exam'), \
-                  (Exam.ORAL_EXAM, 'Oral exam'), \
-                  #(Exam.PAPER, 'paper'), \
-                  (Exam.OTHER, 'Assessed/continuous assessment'), \
-                  (Exam.NOT_SPECIFIED, ''))
-    LOCATIONS = ((Location.FREISING, 'Freising'), \
-                 (Location.GARCHING, 'Garching'), \
-                 (Location.GARCHING_HOCHBRÜCK, 'Garching-Hochbrück'), \
-                 (Location.INNER_CITY, 'Inner city'), \
-                 (Location.OTHER, 'Other'), \
-                 (Location.NOT_SPECIFIED, ''))
-    LANGUAGES = ((Language.ENGLISH, 'English'), \
-                 (Language.GERMAN, 'German'), \
-                 (Language.OTHER, 'Other'), \
-                 (Language.NOT_SPECIFIED, ''))
-    COURSE_TYPES = ((CourseFormat.SEMINAR, 'Seminar'), \
-                    (CourseFormat.WORKSHOP, 'Workshop'), \
-                    (CourseFormat.COLLOQUIUM, 'Colloquium'), \
-                    (CourseFormat.MODULE, 'Module'), \
-                    (CourseFormat.COURSE, 'Course'), \
-                    (CourseFormat.EXERCICE, 'Exercice'), \
-                    (CourseFormat.EXCURSION, 'Excursion'), \
-                    (CourseFormat.PRESENTATION, 'Presentation'), \
-                    (CourseFormat.OTHER, 'Other'), \
-                    (CourseFormat.NOT_SPECIFIED, ''))
-
     #pk = title, language, exam, credits, place?
+    
     id =            models.AutoField(primary_key=True)
     title =         models.CharField(max_length=100, default='')
     time =          models.TimeField(default='00:00')
     credits =       models.IntegerField(default=0)
-    place =         models.IntegerField(choices=LOCATIONS, default=Location.NOT_SPECIFIED)
-    exam =          models.IntegerField(choices=EXAM_TYPES, default=Exam.NOT_SPECIFIED)
+    #place =         models.IntegerField(choices=LOCATIONS, default=Location.NOT_SPECIFIED)
+    location =      models.ForeignKey(Location, default=None, blank=True, null=True, on_delete=models.CASCADE)
+    #exam =          models.IntegerField(choices=EXAM_TYPES, default=Exam.NOT_SPECIFIED)
+    exam =          models.ForeignKey(Exam, default=None, blank=True, null=True, on_delete=models.CASCADE)
     categories =    models.ManyToManyField(Category)
     
     selections =    models.BigIntegerField(default=0)
@@ -127,8 +125,10 @@ class Module(models.Model):
     sws =               models.FloatField(default=0.0)
     minParticipants =   models.IntegerField(default=0)
     maxParticipants =   models.IntegerField(default=sys.maxsize)
-    type =              models.IntegerField(choices=COURSE_TYPES, default=CourseFormat.NOT_SPECIFIED)
-    language =          models.CharField(max_length=2, choices=LANGUAGES, default=Language.NOT_SPECIFIED)
+    #type =              models.IntegerField(choices=COURSE_TYPES, default=CourseFormat.NOT_SPECIFIED)
+    type =              models.ForeignKey(CourseFormat, default=None, blank=True, null=True, on_delete=models.CASCADE)
+    #language =          models.CharField(max_length=2, choices=LANGUAGES, default=Language.NOT_SPECIFIED)
+    language =          models.ForeignKey(Language, default=None, blank=True, null=True, on_delete=models.CASCADE)
     
     def __str__(self):
         return self.title
@@ -136,13 +136,15 @@ class Module(models.Model):
     def __eq__(self, other):
         d1 = self.__dict__
         d2 = other.__dict__
-        if len(d1) != len(d2):
+        cleanupKeysD1 = list(filter(lambda s: not s.startswith('_'), d1.keys()))
+        cleanupKeysD2 = list(filter(lambda s: not s.startswith('_'), d2.keys()))
+        if len(cleanupKeysD1) != len(cleanupKeysD2):
             return False
-        for key, value in d1.items():
-            if not (key.startswith('_') or (key in d2 and d2[key] == value)):
+        for key in cleanupKeysD1:
+            if not (key in d2 and d2[key] == d1[key]):
                 return False
-        for key, value in d2.items():
-            if not (key.startswith('_') or (key in d1 and d1[key] == value)):
+        for key in cleanupKeysD2:
+            if not (key in d1 and d1[key] == d2[key]):
                 return False
         return True
     
@@ -174,29 +176,17 @@ class Module(models.Model):
     class Meta:
         ordering = ('title', 'credits', 'time', 'id',)
 
-class TestPersons(models.Model):
+class TestPerson(models.Model):
     #name, personality type (pers_type), modules
-    PERSONALITY_TYPES = ((Personality.STRICT, 'strict'), \
-                         (Personality.LOOSE, 'loose'), \
-                         (Personality.CURIOUS, 'curious'), \
-                         (Personality.CREDIT_ORIENTED, 'credit-oriented'), \
-                         (Personality.LAZY, 'lazy'), \
-                         (Personality.NERD, 'nerd'), \
-                         (Personality.DO_IT_ALL, 'do-it-all'), \
-                         (Personality.TIME_PRESSURED, 'time-pressured'), \
-                         (Personality.DETAIL_ORIENTED, 'detail-oriented'), \
-                         (Personality.ANYTHING_WORKS, 'anything works'), \
-                         (Personality.EASY_EXAM, 'easy exam'), \
-                         (Personality.ONLY_WRITTEN_EXAM, 'only written exam'), \
-                         (Personality.THE_HARDER_THE_BETTER, 'the harder, the better'), )
-
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=50, default='')
-    pers_type = models.IntegerField(choices=PERSONALITY_TYPES, default=None)
+    #personality = models.IntegerField(choices=PERSONALITY_TYPES, default=None)
+    personality = models.ForeignKey(Personality, on_delete=models.CASCADE) #not null; required
     modules = models.ManyToManyField(Module)
+    categories = models.ManyToManyField(Category)
     
     def __str__(self):
-        return self.name + " is " + self.PERSONALITY_TYPES[self.pers_type][1]
+        return self.name + " is " + self.PERSONALITY_TYPES[self.personality][1]
 
     class Meta:
-        ordering = ('pers_type', 'name',)
+        ordering = ('personality', 'name',)
