@@ -6,11 +6,16 @@ Created on Mon Mar 23 03:43:16 2017
 """
 from .models import Exam, Location, Interest, Category, Module
 from django import forms
+from django.db import DatabaseError
 from dal import autocomplete
 from dal.widgets import SelectMultiple
 
 class RecommenderForm(forms.Form):
-    interests = forms.TypedMultipleChoiceField(choices=[(i.name, i.name) for i in Interest.objects.all()], empty_value=[], required=False)
+    try:
+        choices = [(i.name, i.name) for i in Interest.objects.all()]
+    except DatabaseError:
+        choices = []
+    interests = forms.TypedMultipleChoiceField(choices=choices, empty_value=[], required=False)
     #location = forms.TypedChoiceField(choices=Location.LOCATIONS, required=False)
     time = forms.TimeField(required=False, widget=forms.TimeInput(format='%H:%M'))
     credits = forms.FloatField(min_value=0.0, required=False)
@@ -18,7 +23,11 @@ class RecommenderForm(forms.Form):
     #exam = forms.TypedChoiceField(choices=Exam.EXAM_TYPES, required=False)
 
 class AdvancedRecommenderForm(forms.Form):
-    interests = forms.TypedMultipleChoiceField(choices=[(i.name, i.name) for i in Interest.objects.all()], empty_value=[], required=False)
+    try:
+        choices = [(i.name, i.name) for i in Interest.objects.all()]
+    except DatabaseError:
+        choices = []
+    interests = forms.TypedMultipleChoiceField(choices=choices, empty_value=[], required=False)
     #locationList = forms.TypedChoiceField(choices=Location.LOCATIONS, required=False)
     timeMin = forms.TimeField(required=False, widget=forms.TimeInput(format='%H:%M'))
     timeMax = forms.TimeField(required=False, widget=forms.TimeInput(format='%H:%M'))
@@ -28,15 +37,19 @@ class AdvancedRecommenderForm(forms.Form):
     #examListDAL = forms.TypedChoiceField(choices=Exam.EXAM_TYPES, widget=autocomplete.Select2Multiple(choices=Exam.EXAM_TYPES), required=False)
     
 class ModuleForm(forms.ModelForm):
+    try:
+        choices = [(i.name, i.name) for i in Interest.objects.all()]
+    except DatabaseError:
+        choices = []
     #interests = forms.TypedMultipleChoiceField(choices=[(i.name, i.name) for i in Interest.objects.all()], empty_value="Please enter your interests", required=False)
-    interests = forms.TypedMultipleChoiceField(choices=[(i.name, i.name) for i in Interest.objects.all()], empty_value=[], required=False)
+    interests = forms.TypedMultipleChoiceField(choices=choices, empty_value=[], required=False)
     
-    #time = forms.TimeField(widget=forms.widgets.TimeInput(input_formats=["%H:%M"]))
     time = forms.TimeField(input_formats=["%H:%M"], required=False, widget=forms.TimeInput(format='%H:%M'), initial='00:00')
+    credits = forms.FloatField(min_value=0.0, required=False)
     
     class Meta:
         model = Module
-        fields = ['time', 'exam', 'location', 'credits']#, 'interests']
+        fields = ['time', 'exam', 'location', 'credits']#, 'type', 'language', 'interests']
         '''
         labels = {
             'interests': ('Interests'),

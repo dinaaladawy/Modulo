@@ -8,6 +8,7 @@ Created on Mon Mar 13 14:11:11 2017
 from .algorithms import UpdateType, LinearClassifier
 from .models import Exam, Location, Interest, Category, Module
 from django.db.models.signals import pre_save, pre_delete
+from django.db import DatabaseError
 from django.dispatch import receiver
 import datetime, json, copy
 
@@ -30,8 +31,8 @@ class Recommender():
     def __init__(self, 
                  id=None, 
                  timeInterval=(datetime.datetime.strptime('00:00', '%H:%M').time(), datetime.datetime.strptime('23:59', '%H:%M').time()), 
-                 location=Location.NOT_SPECIFIED,
-                 examType=Exam.NOT_SPECIFIED,
+                 location=None,
+                 examType=None,
                  credits=(0, float('inf')),
                  interests=[]):
         self.id = id
@@ -71,21 +72,41 @@ class Recommender():
     
     #checks if the module is in compliance with the filters
     def __checkModule(self, m):
+        '''
+        print("Checking module", m.title)
+        print("Filters:")
+        for key, value in self.filters.items():
+            print('\tkey = ', key, '; value = ', value, sep='')
+        print('Module:')
+        for key in self.filters.keys():
+            if key != 'categories':
+                print('\tkey = ', key, '; m.', key, ' = ', getattr(m, key), sep='')
+            else:
+                print('\tkey = ', key, '; m.', key, ' = [', sep='', end='')
+                module_value = getattr(m, key)
+                for c in module_value.all():
+                    print(c.name, ', ', sep='', end='')
+                print(']')
+        ''' 
         for key, value in self.filters.items():
             module_value = getattr(m, key)
             if key == 'time':
                 if not (value[0] <= module_value <= value[1]):
+                    #print("Module", m.title, "doesn't respect time filter!")
                     return False
             if key == 'exam':
                 #if module_value != Exam.NOT_SPECIFIED and module_value not in value:
-                if module_value is not None and value != Exam.NOT_SPECIFIED and module_value not in value:
+                if module_value is not None and value is not None and module_value not in value:
+                    #print("Module", m.title, "doesn't respect exam filter!")
                     return False
             if key == 'location':
                 #if module_value != Location.NOT_SPECIFIED and module_value not in value:
-                if module_value is not None and value != Location.NOT_SPECIFIED and module_value not in value:
+                if module_value is not None and value is not None and module_value not in value:
+                    #print("Module", m.title, "doesn't respect location filter!")
                     return False
             if key == 'credits':
                 if module_value != 0.0 and not (value[0] <= module_value <= value[1]):
+                    #print("Module", m.title, "doesn't respect credits filter!")
                     return False
             if key == 'categories':
                 module_category_in_selected_categories = False or (module_value.all().count() == 0)
@@ -94,13 +115,16 @@ class Recommender():
                         module_category_in_selected_categories = True
                         break
                 if not module_category_in_selected_categories:
+                    #print("Module", m.title, "doesn't respect categories filter!")
                     return False
+        #print("Module", m.title, "respects the filters!")
         return True
     
     #apply the filters (categories_sorted, time, location, exam, etc.) on the modules
     #return list of modules (not just module titles...) matching all filters...
     def __filterModules(self):
         return [m for m in Module.objects.all() if self.__checkModule(m)]
+        #return [m for m in Module.objects.filter(id__range=(0, 15)) if self.__checkModule(m)]
         
     #sort the selected/filtered modules according to relevance
     #return sorted list of modules (not module titles, actual modules...)
@@ -111,12 +135,18 @@ class Recommender():
     def initialize():
         #print("Initializing the weight matrix of the recommender system!")
         #get the number of categories in the database
-        categories = list(Category.objects.all())
+        try:
+            categories = list(Category.objects.all())
+        except DatabaseError:
+            categories = []
         nrCateg = len(categories)
         #print("Number of categories = ", nrCateg, sep='')
         
         #get the number of interests in the database
-        interests = list(Interest.objects.all())
+        try:
+            interests = list(Interest.objects.all())
+        except DatabaseError:
+            interests = []
         nrInter = len(interests)
         #print("Number of interests = ", nrInter, sep='')
         

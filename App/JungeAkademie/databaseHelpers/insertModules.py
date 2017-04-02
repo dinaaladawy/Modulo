@@ -89,7 +89,7 @@ def getExam(cell=None):
     '''
     if val == []:
         #val.append(Exam.OTHER)
-        val.append(Exam.objects.get(exam_type__icontains='other'))
+        val.append(Exam.objects.get(exam_type__icontains='continuous'))
     return val, cell.value
 
 def getType(cell=None):

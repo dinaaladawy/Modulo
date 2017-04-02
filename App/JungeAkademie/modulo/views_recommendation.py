@@ -5,12 +5,12 @@ Created on Sat Mar 25 11:13:26 2017
 @author: Andrei
 """
 
-from django.http import HttpResponse, HttpResponseRedirect, Http404
+from django.http import HttpResponseRedirect, Http404
 from django.shortcuts import render, reverse
 from .models import Exam, Location, Module, HandleModule
 from .recommender import Recommender, HandleRecommender
 from .feedback import Feedback
-from .forms import ModuleForm, RecommenderForm, AdvancedRecommenderForm
+from .forms import ModuleForm, AdvancedRecommenderForm#, RecommenderForm
 import datetime, copy, enum, json, re
 
 #list containing dictionary {recommendation, recommended_modules, display_indices, detailed_indices, feedback}
@@ -35,9 +35,9 @@ def getRequestFromActiveRequests(request_id):
     
 def validateState(current_state, previous_state, request_id):
     global allowed_transitions
-    print("Current state:", current_state)
-    print("Previous state:", previous_state)
-    print("request_id:", request_id)
+    #print("Current state:", current_state)
+    #print("Previous state:", previous_state)
+    #print("request_id:", request_id)
     if not (previous_state, current_state) in allowed_transitions:
         return False
     if request_id is None and current_state in [UserState.DISPLAY_MODULES, UserState.UPDATE_FILTERS, UserState.SEE_FEEDBACK]:
@@ -67,12 +67,18 @@ def processForm(form, rec, advanced=False):
         if creditsMax is None:
             creditsMax = float('inf')
             
-        if exam is None:
-            exam = Exam.NOT_SPECIFIED
+        if isinstance(exam, Exam):
+            exam = [exam]
+        elif isinstance(exam, list):
+            #TODO: process the list of exams
+            pass
             
-        if location is None:
-            location = Location.NOT_SPECIFIED
-            
+        if isinstance(location, Location):
+            location = [location]
+        elif isinstance(location, list):
+            #TODO: process the list of locations
+            pass
+        
         if interests is None:
             interests = []
     else:
@@ -96,20 +102,16 @@ def processForm(form, rec, advanced=False):
             creditsMin = credits
             creditsMax = credits
             
-        if exam is None:
-            exam = Exam.NOT_SPECIFIED
-        elif isinstance(exam, Exam):
+        if isinstance(exam, Exam):
             exam = [exam]
-        else:
-            #TODO: assert exam is a list of Exam
+        elif isinstance(exam, list):
+            #TODO: process the list of exams
             pass
             
-        if location is None:
-            location = Location.NOT_SPECIFIED
-        elif isinstance(location, Location):
+        if isinstance(location, Location):
             location = [location]
-        else:
-            #TODO: assert location is a list of Location
+        elif isinstance(location, list):
+            #TODO: process the list of locations
             pass
             
         if interests is None:
@@ -123,12 +125,12 @@ def processDisplayModulesPostData(post_data, displayed_modules):
     valid = False
     data = {}
     keys = list(post_data.keys())
-    print(keys)
+    #print(keys)
     moduleButtonPressed = displayed_modules[int(keys[['submit' in key for key in keys].index(True)].split('submit')[1]) - 1] if any(['submit' in key for key in keys]) else None
     mods = ['module' in key for key in keys]
-    print(mods)
+    #print(mods)
     dets = ['details' in key for key in keys]
-    print(dets)
+    #print(dets)
     if any(mods) and mods.count(True) == 1:
         valid = True
         d = {}
@@ -162,13 +164,13 @@ def processSeeFeedbackPostData(post_data, module_dict):
     valid = False
     data = {}
     keys = list(post_data.keys())
-    print(keys)
-    print(post_data)
+    #print(keys)
+    #print(post_data)
     moduleButtonPressed = keys[['submit' in key for key in keys].index(True)].split('submit')[1] if any(['submit' in key for key in keys]) else None
     mods = ['_module_' in key for key in keys]
-    print(mods)
+    #print(mods)
     dets = ['details' in key for key in keys]
-    print(dets)
+    #print(dets)
     if 'submitFeedback' in keys:
         valid = True
         data['submitFeedback'] = True
@@ -246,8 +248,8 @@ def recommender_displayModules(request, state, prev_state, request_id):
     request_info = getRequestFromActiveRequests(request_id)
     if request_info is None:
         global activeRequestList, id_counter
-        print("id_counter: ", id_counter)
-        print("request list: ", activeRequestList)
+        #print("id_counter: ", id_counter)
+        #print("request list: ", activeRequestList)
         request_string = (request.META['SERVER_NAME']+":"+request.META['SERVER_PORT']+request.path)
         return render(request, 'modulo/recommender_error.html', {'error_msg': "No recommendation available with id %d at request %s" % (request_id, request_string)})
     else:
@@ -345,8 +347,8 @@ def recommender_updateFilters(request, state, request_id):
     request_info = getRequestFromActiveRequests(request_id)
     if request_info is None:
         global activeRequestList, id_counter
-        print(id_counter)
-        print(activeRequestList)
+        #print(id_counter)
+        #print(activeRequestList)
         request_string = (request.META['SERVER_NAME']+":"+request.META['SERVER_PORT']+request.path)
         return render(request, 'modulo/recommender_error.html', {'error_msg': "No recommendation available with id %d at request %s" % (request_id, request_string)})
     else:
@@ -374,13 +376,14 @@ def recommender_updateFilters(request, state, request_id):
             # redirect to a new URL:
             return HttpResponseRedirect(reverse('modulo:modulo-recommender', args=[UserState.DISPLAY_MODULES.value, state.value, request_id]))
 
-    # if a GET (or any other method) we'll create a blank form
+    # if a GET (or any other method) we'll create a form 
+    # with the initial values of the filters from the previous recommendation
     else:
         init_interests = rec.interests
-        init_exam = rec.filters['exam']
-        init_location = rec.filters['location']
-        init_time = rec.filters['time'][0] if rec.filters['time'][0] == rec.filters['time'][1] else None
-        init_credits = rec.filters['credits'][0] if rec.filters['credits'][0] == rec.filters['credits'][1] else None
+        init_exam = rec.filters['exam'][0] if isinstance(rec.filters['exam'], list) else None #list
+        init_location = rec.filters['location'][0] if isinstance(rec.filters['location'], list) else None #list
+        init_time = rec.filters['time'][0] if rec.filters['time'][0] == rec.filters['time'][1] else None #tuple
+        init_credits = rec.filters['credits'][0] if rec.filters['credits'][0] == rec.filters['credits'][1] else None #tuple
         
         form = ModuleForm(initial={'interests': init_interests, 'location': init_location, 'exam': init_exam, 'time': init_time, 'credits': init_credits})
         #form = RecommenderForm(initial={'interests': init_interests, 'location': init_location, 'exam': init_exam, 'time': init_time, 'credits': init_credits})
@@ -404,8 +407,9 @@ def recommender_seeFeedback(request, state, request_id):
     if request.method == 'POST':
         valid, data, moduleButtonPressed = processSeeFeedbackPostData(request.POST, modules_dict)
         if not valid:
+            detailed_views = json.loads(request_info['detailed_views'])
             error_msg = 'Select a choice for module %s if you want to update its feedback!' % moduleButtonPressed
-            return render(request, 'modulo/recommender_seeFeedback.html', {'error_message': error_msg, 'seeFeedback': UserState.SEE_FEEDBACK.value, 'displayModules': UserState.DISPLAY_MODULES.value, 'state': state.value, 'id': request_id, 'selected_module': modules_dict['selectedModule'], 'interesting_modules': modules_dict['interestingModules'], 'not_for_me_modules': modules_dict['notForMeModules'], 'seen_modules': modules_dict['seenModules'], 'not_seen_modules': modules_dict['notSeenModules']})
+            return render(request, 'modulo/recommender_seeFeedback.html', {'error_message': error_msg, 'details': detailed_views, 'seeFeedback': UserState.SEE_FEEDBACK.value, 'displayModules': UserState.DISPLAY_MODULES.value, 'state': state.value, 'id': request_id, 'selected_module': modules_dict['selectedModule'], 'interesting_modules': modules_dict['interestingModules'], 'not_for_me_modules': modules_dict['notForMeModules'], 'seen_modules': modules_dict['seenModules'], 'not_seen_modules': modules_dict['notSeenModules']})
         
         if 'submitFeedback' in data.keys():
             #incorporate feedback into the system
@@ -457,7 +461,7 @@ def recommender_seeFeedback(request, state, request_id):
             return HttpResponseRedirect(reverse('modulo:modulo-recommender', args=[UserState.SEE_FEEDBACK.value, state.value, request_id]))
 
     else:
-        print("request.method = ", request.method)
+        #print("request.method = ", request.method)
         detailed_views = json.loads(request_info['detailed_views'])
         return render(request, 'modulo/recommender_seeFeedback.html', {'details': detailed_views, 'seeFeedback': UserState.SEE_FEEDBACK.value, 'displayModules': UserState.DISPLAY_MODULES.value, 'state': state.value, 'id': request_id, 'selected_module': modules_dict['selectedModule'], 'interesting_modules': modules_dict['interestingModules'], 'not_for_me_modules': modules_dict['notForMeModules'], 'seen_modules': modules_dict['seenModules'], 'not_seen_modules': modules_dict['notSeenModules']})
     

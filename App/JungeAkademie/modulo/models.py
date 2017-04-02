@@ -8,7 +8,7 @@ class Exam(models.Model):
     #ORAL_EXAM = 'Oral exam'
     #OTHER = 'Other'
     NOT_SPECIFIED = 'Not specified'
-    exam_type = models.CharField(primary_key=True, max_length=100, default=NOT_SPECIFIED)
+    exam_type = models.CharField(primary_key=True, max_length=100, default=None)
     
     def __str__(self):
         return self.exam_type
@@ -24,7 +24,7 @@ class CourseFormat(models.Model):
     #PRESENTATION = 'Presentation'
     #OTHER = 'Other'
     NOT_SPECIFIED = 'Not specified'
-    course_format = models.CharField(primary_key=True, max_length=100, default=NOT_SPECIFIED)
+    course_format = models.CharField(primary_key=True, max_length=100, default=None)
     
     def __str__(self):
         return self.course_format
@@ -34,7 +34,7 @@ class Language(models.Model):
     #GERMAN = 'German'
     #OTHER = 'Other'
     NOT_SPECIFIED = 'Not specified'
-    language = models.CharField(primary_key=True, max_length=100, default=NOT_SPECIFIED)
+    language = models.CharField(primary_key=True, max_length=100, default=None)
     
     def __str__(self):
         return self.language
@@ -46,7 +46,7 @@ class Location(models.Model):
     #INNER_CITY = 'Inner city'
     #OTHER = 'Other'
     NOT_SPECIFIED = 'Not specified'
-    location = models.CharField(primary_key=True, max_length=500, default=NOT_SPECIFIED)
+    location = models.CharField(primary_key=True, max_length=500, default=None)
     
     def __str__(self):
         return self.location
@@ -67,7 +67,7 @@ class Personality(models.Model):
     #THE_HARDER_THE_BETTER = 'The harder, the better'
     #OTHER = 'Other'
     NOT_SPECIFIED = 'Not specified'
-    personality = models.CharField(primary_key=True, max_length=200, default=NOT_SPECIFIED)    
+    personality = models.CharField(primary_key=True, max_length=200, default=None)    
     
     def __str__(self):
         return self.personality
@@ -108,9 +108,9 @@ class Module(models.Model):
     time =          models.TimeField(default='00:00')
     credits =       models.IntegerField(default=0)
     #place =         models.IntegerField(choices=LOCATIONS, default=Location.NOT_SPECIFIED)
-    location =      models.ForeignKey(Location, blank=True, null=True, on_delete=models.CASCADE)
+    location =      models.ForeignKey(Location, default=None, blank=True, null=True, on_delete=models.CASCADE)
     #exam =          models.IntegerField(choices=EXAM_TYPES, default=Exam.NOT_SPECIFIED)
-    exam =          models.ForeignKey(Exam, blank=True, null=True, on_delete=models.CASCADE)
+    exam =          models.ForeignKey(Exam, default=None, blank=True, null=True, on_delete=models.CASCADE)
     categories =    models.ManyToManyField(Category)
     
     selections =    models.BigIntegerField(default=0)
@@ -126,9 +126,9 @@ class Module(models.Model):
     minParticipants =   models.IntegerField(default=0)
     maxParticipants =   models.IntegerField(default=sys.maxsize)
     #type =              models.IntegerField(choices=COURSE_TYPES, default=CourseFormat.NOT_SPECIFIED)
-    type =              models.ForeignKey(CourseFormat, null=True, on_delete=models.CASCADE)
+    type =              models.ForeignKey(CourseFormat, default=None, blank=True, null=True, on_delete=models.CASCADE)
     #language =          models.CharField(max_length=2, choices=LANGUAGES, default=Language.NOT_SPECIFIED)
-    language =          models.ForeignKey(Language, null=True, on_delete=models.CASCADE)
+    language =          models.ForeignKey(Language, default=None, blank=True, null=True, on_delete=models.CASCADE)
     
     def __str__(self):
         return self.title
@@ -136,13 +136,15 @@ class Module(models.Model):
     def __eq__(self, other):
         d1 = self.__dict__
         d2 = other.__dict__
-        if len(d1) != len(d2):
+        cleanupKeysD1 = list(filter(lambda s: not s.startswith('_'), d1.keys()))
+        cleanupKeysD2 = list(filter(lambda s: not s.startswith('_'), d2.keys()))
+        if len(cleanupKeysD1) != len(cleanupKeysD2):
             return False
-        for key, value in d1.items():
-            if not (key.startswith('_') or (key in d2 and d2[key] == value)):
+        for key in cleanupKeysD1:
+            if not (key in d2 and d2[key] == d1[key]):
                 return False
-        for key, value in d2.items():
-            if not (key.startswith('_') or (key in d1 and d1[key] == value)):
+        for key in cleanupKeysD2:
+            if not (key in d1 and d1[key] == d2[key]):
                 return False
         return True
     
@@ -179,7 +181,7 @@ class TestPerson(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=50, default='')
     #personality = models.IntegerField(choices=PERSONALITY_TYPES, default=None)
-    personality = models.ForeignKey(Personality, on_delete=models.CASCADE)
+    personality = models.ForeignKey(Personality, on_delete=models.CASCADE) #not null; required
     modules = models.ManyToManyField(Module)
     categories = models.ManyToManyField(Category)
     

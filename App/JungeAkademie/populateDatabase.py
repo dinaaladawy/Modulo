@@ -30,4 +30,6 @@ insertInterests(databaseFile)
 insertCategories(databaseFile)
 #insertTestPersons(databaseFile)
 insertModules(databaseFile) #MUST BE LAST THING TO BE UPDATED
-input("Press ENTER to exit program...")
+
+if __name__ == '__main__':
+    input("Press ENTER to exit program...")
