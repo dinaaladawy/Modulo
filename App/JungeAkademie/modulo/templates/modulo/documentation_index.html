@@ -13,4 +13,8 @@ Welcome to the documentation of Modulo
 	<ul><a href="{% url 'modulo:modulo-category' %}">Categories</a></ul>
 	<ul><a href="{% url 'modulo:modulo-interest' %}">Interests</a></ul>
 	<!-- <ul>Test Persons</ul> -->
+	
+	{% if request.META.HTTP_REFERER %}
+	<a href="{{ request.META.HTTP_REFERER }}">Back</a>
+	{% endif %}
 {% endblock %}

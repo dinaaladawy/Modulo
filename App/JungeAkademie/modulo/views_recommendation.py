@@ -7,7 +7,7 @@ Created on Sat Mar 25 11:13:26 2017
 
 from django.http import HttpResponseRedirect, Http404
 from django.shortcuts import render, reverse
-from .models import Exam, Location, Module, HandleModule
+from .models import Exam, Location, Interest, Module, HandleModule
 from .recommender import Recommender, HandleRecommender
 from .feedback import Feedback
 from .forms import ModuleForm, AdvancedRecommenderForm#, RecommenderForm
@@ -81,6 +81,9 @@ def processForm(form, rec, advanced=False):
         
         if interests is None:
             interests = []
+        else:
+            #print(interests)
+            interests = [Interest.object.get(id=i).name for i in interests]
     else:
         location = form.cleaned_data['location']
         time = form.cleaned_data['time']
@@ -116,6 +119,9 @@ def processForm(form, rec, advanced=False):
             
         if interests is None:
             interests = []
+        else:
+            #print(interests)
+            interests = [Interest.objects.get(id=i).name for i in interests]
         
     rec.updateFilters(location=location, timeInterval=(timeMin, timeMax), examType=exam, credits=(creditsMin, creditsMax), interests=interests)
     #print("After processing filters in processForm() function:\n", json.dumps(rec, cls=HandleRecommender))
@@ -335,7 +341,7 @@ def recommender_displayModules(request, state, prev_state, request_id):
             detailed_views = json.loads(request_info['detailed_views'])
             
         if len(modules) == 0:
-            return render(request, 'modulo/recommender_displayModules.html', {'error_message': "There are no modules which match your current filters.. Try updating them using the button below!", 'id': request_id, 'modules': [modules[i] for i in display_indices], 'details': detailed_views, 'state': state.value, 'displayModules': UserState.DISPLAY_MODULES.value, 'updateFilters': UserState.UPDATE_FILTERS.value, 'seeFeedback': UserState.SEE_FEEDBACK.value})
+            return render(request, 'modulo/recommender_displayModules.html', {'error_message': "There are no modules which match your current filters. Try updating them using the button below!", 'id': request_id, 'modules': [modules[i] for i in display_indices], 'details': detailed_views, 'state': state.value, 'displayModules': UserState.DISPLAY_MODULES.value, 'updateFilters': UserState.UPDATE_FILTERS.value, 'seeFeedback': UserState.SEE_FEEDBACK.value})
         elif len(display_indices) == 0:
             return render(request, 'modulo/recommender_displayModules.html', {'error_message': "Thank you for providing feedback to every module. You can now review the provided feedback (SEE FEEDBACK) and from there submit it so that the system can learn to make better recommendations!", 'id': request_id, 'modules': [modules[i] for i in display_indices], 'details': detailed_views, 'state': state.value, 'displayModules': UserState.DISPLAY_MODULES.value, 'updateFilters': UserState.UPDATE_FILTERS.value, 'seeFeedback': UserState.SEE_FEEDBACK.value})
         else:
@@ -379,7 +385,8 @@ def recommender_updateFilters(request, state, request_id):
     # if a GET (or any other method) we'll create a form 
     # with the initial values of the filters from the previous recommendation
     else:
-        init_interests = rec.interests
+        #init_interests = rec.interests
+        init_interests = [Interest.objects.get(name=i).id for i in rec.interests]
         init_exam = rec.filters['exam'][0] if isinstance(rec.filters['exam'], list) else None #list
         init_location = rec.filters['location'][0] if isinstance(rec.filters['location'], list) else None #list
         init_time = rec.filters['time'][0] if rec.filters['time'][0] == rec.filters['time'][1] else None #tuple
