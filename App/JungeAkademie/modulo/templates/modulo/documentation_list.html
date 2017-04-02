@@ -24,6 +24,10 @@
 			<!-- <li>{{ obj }} -->
 		</p>
 	{% endfor %}
+	
+	{% if request.META.HTTP_REFERER %}
+	<a href="{{ request.META.HTTP_REFERER }}">Back</a>
+	{% endif %}
 {% endblock %}
 
 {% comment %}
