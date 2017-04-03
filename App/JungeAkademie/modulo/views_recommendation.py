@@ -10,7 +10,7 @@ from django.shortcuts import render, reverse
 from .models import Exam, Location, Interest, Module, HandleModule
 from .recommender import Recommender, HandleRecommender
 from .feedback import Feedback
-from .forms import ModuleForm, AdvancedRecommenderForm#, RecommenderForm
+from .forms import ModuleForm, AdvancedRecommenderForm
 import datetime, copy, enum, json, re
 
 #list containing dictionary {recommendation, recommended_modules, display_indices, detailed_indices, feedback}
@@ -247,8 +247,8 @@ def recommender_selectFilters(request, state):
         #form = RecommenderForm()
         #form = AdvancedRecommenderForm()
         #print(form.cleaned_Data)
-
-    return render(request, 'modulo/recommender_selectFilters.html', {'form': form, 'state': state.value, 'selectFilters': UserState.SELECT_FILTERS.value})
+	
+	return render(request, 'modulo/recommender_selectFilters.html', {'form': form, 'state': state.value, 'selectFilters': UserState.SELECT_FILTERS.value})
 
 def recommender_displayModules(request, state, prev_state, request_id):
     request_info = getRequestFromActiveRequests(request_id)
@@ -268,19 +268,21 @@ def recommender_displayModules(request, state, prev_state, request_id):
         modules = Module.get_modules_from_json(request_info['modules'])
         display_indices = json.loads(request_info['module_display_indices'])
         detailed_views = json.loads(request_info['detailed_views'])
+        modules_dict = json.loads(request_info['feedback'])
         
         #print(display_indices)
         #print([modules[i] for i in display_indices])
         valid, data, moduleButtonPressed = processDisplayModulesPostData(request.POST, [modules[i] for i in display_indices])
         if not valid:
-            error_msg = 'You must either select the module %s, mark it as interesting or mark it as a not-for-me module before submitting feedback for it!' % moduleButtonPressed
-            return render(request, 'modulo/recommender_displayModules.html', {'error_message': error_msg, 'id': request_id, 'modules': [modules[i] for i in display_indices], 'details': detailed_views, 'state': state.value, 'displayModules': UserState.DISPLAY_MODULES.value, 'updateFilters': UserState.UPDATE_FILTERS.value, 'seeFeedback': UserState.SEE_FEEDBACK.value})
+            error_msg = 'You must either select the module "%s", mark it as interesting or mark it as a not-for-me module before submitting feedback for it!' % moduleButtonPressed
+            template_args = {'error_message': error_msg, 'id': request_id, 'modules': [modules[i] for i in display_indices], 'details': detailed_views, 'state': state.value, 'displayModules': UserState.DISPLAY_MODULES.value, 'updateFilters': UserState.UPDATE_FILTERS.value, 'seeFeedback': UserState.SEE_FEEDBACK.value}
+            if modules_dict['selectedModule'] is not None:
+                template_args.update({'selected_module': modules_dict['selectedModule']})
+            return render(request, 'modulo/recommender_displayModules.html', template_args)
             
-        modules_dict = json.loads(request_info['feedback'])
         if 'feedback' in data.keys():
             remaining_indices = json.loads(request_info['module_remaining_indices'])
             if data['feedback']['feedbackType'] == 'selectedModule':
-                #TODO: display warning that we are possibly overriding the selection of the current selected module
                 if modules_dict['selectedModule'] is not None and modules_dict['selectedModule'] not in modules_dict['interestingModules']:
                     modules_dict['interestingModules'].append(modules_dict['selectedModule'])
                 modules_dict['selectedModule'] = data['feedback']['module_title']
@@ -339,13 +341,19 @@ def recommender_displayModules(request, state, prev_state, request_id):
             display_indices = json.loads(request_info['module_display_indices'])
             remaining_indices = json.loads(request_info['module_remaining_indices'])
             detailed_views = json.loads(request_info['detailed_views'])
+            modules_dict = json.loads(request_info['feedback'])
             
+        template_args = {'id': request_id, 'modules': [modules[i] for i in display_indices], 'details': detailed_views, 'state': state.value, 'displayModules': UserState.DISPLAY_MODULES.value, 'updateFilters': UserState.UPDATE_FILTERS.value, 'seeFeedback': UserState.SEE_FEEDBACK.value}
+        if modules_dict['selectedModule'] is not None:
+            template_args.update({'selected_module': modules_dict['selectedModule']})
         if len(modules) == 0:
-            return render(request, 'modulo/recommender_displayModules.html', {'error_message': "There are no modules which match your current filters. Try updating them using the button below!", 'id': request_id, 'modules': [modules[i] for i in display_indices], 'details': detailed_views, 'state': state.value, 'displayModules': UserState.DISPLAY_MODULES.value, 'updateFilters': UserState.UPDATE_FILTERS.value, 'seeFeedback': UserState.SEE_FEEDBACK.value})
+            error_msg = "There are no modules which match your current filters. Try updating them using the button below!"
+            template_args.update({'error_message': error_msg})
         elif len(display_indices) == 0:
-            return render(request, 'modulo/recommender_displayModules.html', {'error_message': "Thank you for providing feedback to every module. You can now review the provided feedback (SEE FEEDBACK) and from there submit it so that the system can learn to make better recommendations!", 'id': request_id, 'modules': [modules[i] for i in display_indices], 'details': detailed_views, 'state': state.value, 'displayModules': UserState.DISPLAY_MODULES.value, 'updateFilters': UserState.UPDATE_FILTERS.value, 'seeFeedback': UserState.SEE_FEEDBACK.value})
-        else:
-            return render(request, 'modulo/recommender_displayModules.html', {'id': request_id, 'modules': [modules[i] for i in display_indices], 'details': detailed_views, 'state': state.value, 'displayModules': UserState.DISPLAY_MODULES.value, 'updateFilters': UserState.UPDATE_FILTERS.value, 'seeFeedback': UserState.SEE_FEEDBACK.value})
+            error_msg = "Thank you for providing feedback to every module. You can now review the provided feedback (SEE FEEDBACK) and from there submit it so that the system can learn to make better recommendations!"
+            template_args.update({'error_message': error_msg})
+        return render(request, 'modulo/recommender_displayModules.html', template_args)
+    
     else:
         raise Http404("Unknown method for request %s" % request)
 
