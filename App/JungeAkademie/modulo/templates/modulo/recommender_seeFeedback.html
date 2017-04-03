@@ -2,12 +2,7 @@
 
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 
-<!--
-<form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" method="post">
-<button type="button" name="MyButton" value="clicked" onclick="alert('Are you sure you want to click here?')">Click Me!</button>
-<input type="submit" name="ButtonCheck" value="Deselect module" />
-</form>
--->
+<p id="output"></p> 
 
 {% if selected_module %}
 	<strong>Selected module:</strong> <u>{{ selected_module }}</u><br>
@@ -18,7 +13,7 @@
 		{% csrf_token %}
 		<input type="radio" name="selected_module_{{ selected_module }}" id="selected_module_feedback" value="interesting" />
 		<label for="selected_module_feedback">Deselect module</label><br>
-		<input type="submit" name="submit{{ selected_module }}" value="Update feedback" />
+		<input type="submit" onclick="return submitForm('selected', 0, &quot;{{ selected_module }}&quot;);" name="submit{{ selected_module }}" value="Update feedback" />
 	</form>
 	<form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" style="display: inline;" method="post">
 		{% csrf_token %}
@@ -40,11 +35,13 @@
 		{% endif %}
 		<form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" style="display: inline;" method="post">
 			{% csrf_token %}
-			<input type="radio" name="interesting_module_{{ m }}" id="interesting_module_feedback_select_{{ m }}" value="selected" />
+			<input type="radio" name="interesting_module_{{ m }}" id="interesting_module_feedback_select_{{ m }}" value="selected" onclick="selectModule('interesting', {{ forloop.counter }} - 1)" />
 			<label for="interesting_module_feedback_select_{{ m }}">Select module</label>
-			<input type="radio" name="interesting_module_{{ m }}" id="interesting_module_feedback_not_for_me{{ m }}" value="not_for_me" />
+			
+			<input type="radio" name="interesting_module_{{ m }}" id="interesting_module_feedback_not_for_me{{ m }}" value="not_for_me" onclick="unselectModule('interesting', {{ forloop.counter }} - 1)" />
 			<label for="interesting_module_feedback_not_for_me{{ m }}">Not-for-me module</label><br>
-			<input type="submit" name="submit{{ m }}" value="Update feedback" />
+			
+			<input type="submit" onclick="return submitForm('interesting', {{ forloop.counter }} - 1, &quot;{{ m }}&quot;);" name="submit{{ m }}" value="Update feedback" />
 			
 		</form>
 		<form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" style="display: inline;" method="post">
@@ -68,11 +65,11 @@
 		{% endif %}
 		<form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" style="display: inline;" method="post">
 			{% csrf_token %}
-			<input type="radio" name="not_for_me_module_{{ m }}" id="not_for_me_module_feedback_select_{{ m }}" value="selected" />
+			<input type="radio" name="not_for_me_module_{{ m }}" id="not_for_me_module_feedback_select_{{ m }}" value="selected" onclick="selectModule('notForMe', {{ forloop.counter }} - 1)" />
 			<label for="not_for_me_module_feedback_select_{{ m }}">Select module</label>
-			<input type="radio" name="not_for_me_module_{{ m }}" id="not_for_me_module_feedback_interesting_{{ m }}" value="interesting" />
+			<input type="radio" name="not_for_me_module_{{ m }}" id="not_for_me_module_feedback_interesting_{{ m }}" value="interesting" onclick="unselectModule('notForMe', {{ forloop.counter }} - 1)" />
 			<label for="not_for_me_module_feedback_interesting_{{ m }}">Interesting module</label><br>
-			<input type="submit" name="submit{{ m }}" value="Update feedback" />
+			<input type="submit" onclick="return submitForm('notForMe', {{ forloop.counter }} - 1, &quot;{{ m }}&quot;);" name="submit{{ m }}" value="Update feedback" />
 		</form>
 		<form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" style="display: inline;" method="post">
 			{% csrf_token %}
@@ -109,3 +106,75 @@
 	{% csrf_token %}
 	<input type="submit" name="submitFeedback" value="Submit feedback" />
 </form>
+
+<script>
+//var modules = []
+var selectedModule = ""
+var nrSelectedModule = 0
+var nrInterestingModules = 0
+var interestingModulesSelected = []
+var nrNotForMeModules = 0
+var notForMeModulesSelected = []
+
+
+function confirmTxt(newSelectedModule){
+	document.getElementById("output").innerHTML = selectedModule
+	return "You can only have one selected module.\nBy proceeding you will override the selected module \""+selectedModule+"\" with \""+newSelectedModule+"\".\nProceed?"
+}
+
+addModules()
+function addModules() {
+	{% if selected_module %}
+		//modules[modules.length] = "{{ selected_module }}"
+		nrSelectedModule = 1
+		selectedModule = "{{ selected_module }}".replace(/&#39;/g, "'");
+	{% endif %}
+	{% if interesting_modules %}
+		{% for m in interesting_modules %}
+			//modules[modules.length] = "{{ m }}"
+			interestingModulesSelected[interestingModulesSelected.length] = false
+			nrInterestingModules += 1
+		{% endfor %}		
+	{% endif %}
+	{% if not_for_me_modules %}
+		{% for m in not_for_me_modules %}
+			//modules[modules.length] = "{{ m }}"
+			notForMeModulesSelected[notForMeModulesSelected.length] = false
+			nrNotForMeModules += 1
+		{% endfor %}
+	{% endif %}
+	//document.getElementById("output").innerHTML = "modules = "+modules+"; nrSelectedModule="+nrSelectedModule+"; nrInterestingModules="+nrInterestingModules+"; nrNotForMeModules="+nrNotForMeModules
+}
+
+function selectModule(feedbackType, moduleNr) {
+	document.getElementById("output").innerHTML = "Selecting module no. "+moduleNr+" from feedback = "+feedbackType+"; nrSelectedModule="+nrSelectedModule+"; nrInterestingModules="+nrInterestingModules+"; nrNotForMeModules="+nrNotForMeModules
+	if (feedbackType === "interesting"){
+		interestingModulesSelected[moduleNr] = true
+	}
+	else if (feedbackType === "notForMe"){
+		notForMeModulesSelected[moduleNr] = true
+	}
+}
+
+function unselectModule(feedbackType, moduleNr){
+	document.getElementById("output").innerHTML = "Unselecting module no. "+moduleNr+" from feedback = "+feedbackType+"; nrSelectedModule="+nrSelectedModule+"; nrInterestingModules="+nrInterestingModules+"; nrNotForMeModules="+nrNotForMeModules
+	if (feedbackType === "interesting" && interestingModulesSelected[moduleNr]){
+		interestingModulesSelected[moduleNr] = false
+	}
+	else if (feedbackType === "notForMe"){
+		notForMeModulesSelected[moduleNr] = false
+	}
+}
+
+function submitForm(feedbackType, moduleNr, moduleName){
+	document.getElementById("output").innerHTML = "Submitting form: module "+moduleNr+" from feedback = "+feedbackType+"; 	nrSelectedModule="+nrSelectedModule+"; nrInterestingModules="+nrInterestingModules+" and interestingModulesSelected="+interestingModulesSelected+"; nrNotForMeModules="+nrNotForMeModules+" and notForMeModulesSelected="+notForMeModulesSelected
+	if (nrSelectedModule == 1){
+		if ((feedbackType === "interesting" && interestingModulesSelected[moduleNr]) || (feedbackType === "notForMe" && notForMeModulesSelected[moduleNr])){
+			return confirm(confirmTxt(moduleName));
+		}
+	}
+	else{
+		return true
+	}
+}
+</script>
