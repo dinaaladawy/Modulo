@@ -4,8 +4,8 @@
 
 <p id="output"></p>
 
+{% autoescape off %}
 {% for module in modules %}
-	<!-- <p> -->
 	<strong><a href="{% url 'modulo:modulo-module-title' module.title %}"> {{ module.title }} </a><strong><br>
 	{% if module.title in details %}
 		{{ module.module_details }}<br>
@@ -32,7 +32,6 @@
 		{% endif %}
 	</form>
 	<br><br>
-	<!-- </p> -->
 {% endfor %}
 <br>
 <form action="{% url 'modulo:modulo-recommender' updateFilters state id %}" method="get">
@@ -43,13 +42,12 @@
 </form>
 
 <script>
-//var modules = []
 var nrSelectedModule = 0
 var modulesSelected = []
 
-document.getElementById("output").innerHTML = confirmTxt("newTestModule")
+//document.getElementById("output").innerHTML = confirmTxt("newTestModule")
 function confirmTxt(newSelectedModule){
-	return "You can only have one selected module.\nBy proceeding you will override the selected module: \""+"{{ selected_module }}".replace(/&#39;/g, "'")+"\" with \""+newSelectedModule+"\".\nProceed?"
+	return "You can only have one selected module.\nBy proceeding you will override the selected module \""+"{{ selected_module }}"+"\" with \""+newSelectedModule+"\".\nProceed?"
 }
 
 addModules()
@@ -60,29 +58,27 @@ function addModules() {
 	{% for m in modules %}
 		modulesSelected[modulesSelected.length] = false
 	{% endfor %}
-	document.getElementById("output").innerHTML = "modulesSelected = "+modulesSelected
+	//document.getElementById("output").innerHTML = "modulesSelected = "+modulesSelected
 }
 
-//*
 function selectModule(moduleNr) {
-	document.getElementById("output").innerHTML = "Selecting module no. "+moduleNr
+	//document.getElementById("output").innerHTML = "Selecting module no. "+moduleNr
 	modulesSelected[moduleNr] = true
 }
 
 function unselectModule(moduleNr){
-	document.getElementById("output").innerHTML = "Unselecting module no. "+moduleNr
+	//document.getElementById("output").innerHTML = "Unselecting module no. "+moduleNr
 	modulesSelected[moduleNr] = false
 }
 
 function submitForm(moduleNr, moduleName){
-	document.getElementById("output").innerHTML = "Submitting form: moduleNr = "+moduleNr+" and moduleName = "+moduleName
+	//document.getElementById("output").innerHTML = "Submitting form: moduleNr = "+moduleNr+" and moduleName = "+moduleName
 	if (nrSelectedModule == 1 && modulesSelected[moduleNr]){
 		return confirm(confirmTxt(moduleName));
-		//return true
 	}
 	else{
 		return true
 	}
 }
-//*/
 </script>
+{% endautoescape %}

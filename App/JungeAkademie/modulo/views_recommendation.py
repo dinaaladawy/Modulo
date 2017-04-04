@@ -7,11 +7,11 @@ Created on Sat Mar 25 11:13:26 2017
 
 from django.http import HttpResponseRedirect, Http404
 from django.shortcuts import render, reverse
-from .models import Exam, Location, Interest, Module, HandleModule
-from .recommender import Recommender, HandleRecommender
-from .feedback import Feedback
 from .forms import ModuleForm, AdvancedRecommenderForm
-import datetime, copy, enum, json, re
+from .feedback import Feedback
+from .models import Module, HandleModule
+from .recommender import Recommender, HandleRecommender
+import copy, enum, json, re
 
 #list containing dictionary {recommendation, recommended_modules, display_indices, detailed_indices, feedback}
 activeRequestList = None
@@ -35,108 +35,24 @@ def getRequestFromActiveRequests(request_id):
     
 def validateState(current_state, previous_state, request_id):
     global allowed_transitions
-    #print("Current state:", current_state)
-    #print("Previous state:", previous_state)
-    #print("request_id:", request_id)
     if not (previous_state, current_state) in allowed_transitions:
         return False
     if request_id is None and current_state in [UserState.DISPLAY_MODULES, UserState.UPDATE_FILTERS, UserState.SEE_FEEDBACK]:
         return False
     return True
 
-def processForm(form, rec, advanced=False):
-    # process the data in form.cleaned_data as required
-    if advanced:
-        location = form.cleaned_data['locationList']
-        timeMin = form.cleaned_data['timeMin']
-        timeMax = form.cleaned_data['timeMax']
-        exam = form.cleaned_data['examList']
-        creditsMin = form.cleaned_data['creditsMin']
-        creditsMax = form.cleaned_data['creditsMax']
-        interests = form.cleaned_data['interests']
-        
-        if timeMin is None:
-            timeMin = datetime.datetime.strptime('00:00', '%H:%M').time()
-            
-        if timeMax is None:
-            timeMax = datetime.datetime.strptime('23:59', '%H:%M').time()
-        
-        if creditsMin is None:
-            creditsMin = 0
-            
-        if creditsMax is None:
-            creditsMax = float('inf')
-            
-        if isinstance(exam, Exam):
-            exam = [exam]
-        elif isinstance(exam, list):
-            #TODO: process the list of exams
-            pass
-            
-        if isinstance(location, Location):
-            location = [location]
-        elif isinstance(location, list):
-            #TODO: process the list of locations
-            pass
-        
-        if interests is None:
-            interests = []
-        else:
-            #print(interests)
-            interests = [Interest.object.get(id=i).name for i in interests]
-    else:
-        location = form.cleaned_data['location']
-        time = form.cleaned_data['time']
-        exam = form.cleaned_data['exam']
-        credits = form.cleaned_data['credits']
-        interests = form.cleaned_data['interests']
-        
-        if time is None:
-            timeMin = datetime.datetime.strptime('00:00', '%H:%M').time()
-            timeMax = datetime.datetime.strptime('23:59', '%H:%M').time()
-        else:
-            timeMin = time
-            timeMax = time
-        
-        if credits is None:
-            creditsMin = 0
-            creditsMax = float('inf')
-        else:
-            creditsMin = credits
-            creditsMax = credits
-            
-        if isinstance(exam, Exam):
-            exam = [exam]
-        elif isinstance(exam, list):
-            #TODO: process the list of exams
-            pass
-            
-        if isinstance(location, Location):
-            location = [location]
-        elif isinstance(location, list):
-            #TODO: process the list of locations
-            pass
-            
-        if interests is None:
-            interests = []
-        else:
-            #print(interests)
-            interests = [Interest.objects.get(id=i).name for i in interests]
-        
-    rec.updateFilters(location=location, timeInterval=(timeMin, timeMax), examType=exam, credits=(creditsMin, creditsMax), interests=interests)
-    #print("After processing filters in processForm() function:\n", json.dumps(rec, cls=HandleRecommender))
+def processForm(form, rec):
+    # process the data in form.cleaned_data as required    
+    rec.updateFilters(location=form.processLocation(), timeInterval=form.processTime(), examType=form.processExam(), credits=form.processCredits(), interests=form.processInterests())
     return rec
 
 def processDisplayModulesPostData(post_data, displayed_modules):
     valid = False
     data = {}
     keys = list(post_data.keys())
-    #print(keys)
     moduleButtonPressed = displayed_modules[int(keys[['submit' in key for key in keys].index(True)].split('submit')[1]) - 1] if any(['submit' in key for key in keys]) else None
     mods = ['module' in key for key in keys]
-    #print(mods)
     dets = ['details' in key for key in keys]
-    #print(dets)
     if any(mods) and mods.count(True) == 1:
         valid = True
         d = {}
@@ -170,13 +86,9 @@ def processSeeFeedbackPostData(post_data, module_dict):
     valid = False
     data = {}
     keys = list(post_data.keys())
-    #print(keys)
-    #print(post_data)
     moduleButtonPressed = keys[['submit' in key for key in keys].index(True)].split('submit')[1] if any(['submit' in key for key in keys]) else None
     mods = ['_module_' in key for key in keys]
-    #print(mods)
     dets = ['details' in key for key in keys]
-    #print(dets)
     if 'submitFeedback' in keys:
         valid = True
         data['submitFeedback'] = True
@@ -223,32 +135,45 @@ def recommender_selectFilters(request, state):
     # if this is a POST request we need to process the form data
     if request.method == 'POST':
         # create a form instance and populate it with data from the request:
-        form = ModuleForm(request.POST)
-        #form = RecommenderForm(request.POST)
+        if 'moduleForm' in request.POST:
+            form = ModuleForm(request.POST)
+        elif 'advancedForm' in request.POST:
+            form = AdvancedRecommenderForm(request.POST)
+        else:
+            form = None
+        
         # check whether it's valid:
         if form.is_valid():
             global activeRequestList, id_counter
-            rec = processForm(form, Recommender(id=id_counter), isinstance(form, AdvancedRecommenderForm))
+            rec = processForm(form, Recommender(id=id_counter))
             request_info = {'recommendation': json.dumps(rec, cls=HandleRecommender), 
                             'modules': None, 
                             'module_display_indices': None, 
                             'module_remaining_indices': None, 
                             'detailed_views': None, 
-                            'feedback': None}
+                            'feedback': None,
+                            'advancedForm': isinstance(form, AdvancedRecommenderForm)}
             activeRequestList.append(request_info)
             id_counter += 1
-            
             # redirect to a new URL:
             return HttpResponseRedirect(reverse('modulo:modulo-recommender', args=[UserState.DISPLAY_MODULES.value, state.value, rec.id]))
+        else:
+            template_args = {'state': state.value, 'selectFilters': UserState.SELECT_FILTERS.value}
+            if isinstance(form, AdvancedRecommenderForm):
+                template_args.update({'moduleForm': ModuleForm(), 'advancedForm': form, 'advanced': True})
+            elif isinstance(form, ModuleForm):
+                template_args.update({'moduleForm': form, 'advancedForm': AdvancedRecommenderForm(), 'advanced': False})
+            return render(request, 'modulo/recommender_selectFilters.html', template_args)
 
-    # if a GET (or any other method) we'll create a blank form
+    # if a GET we'll create two blank forms (one simple form and one advanced form)
+    elif request.method == 'GET':
+        moduleForm = ModuleForm()
+        advancedForm = AdvancedRecommenderForm()
+        template_args = {'moduleForm': moduleForm, 'advancedForm': advancedForm, 'state': state.value, 'selectFilters': UserState.SELECT_FILTERS.value}
+        return render(request, 'modulo/recommender_selectFilters.html', template_args)
+    
     else:
-        form = ModuleForm()
-        #form = RecommenderForm()
-        #form = AdvancedRecommenderForm()
-        #print(form.cleaned_Data)
-	
-	return render(request, 'modulo/recommender_selectFilters.html', {'form': form, 'state': state.value, 'selectFilters': UserState.SELECT_FILTERS.value})
+        raise Http404("Unknown method for request %s" % request)
 
 def recommender_displayModules(request, state, prev_state, request_id):
     request_info = getRequestFromActiveRequests(request_id)
@@ -261,8 +186,6 @@ def recommender_displayModules(request, state, prev_state, request_id):
     else:
         rec = Recommender.get_recommendation_from_json(request_info['recommendation'])
     
-    #print(request_info['recommendation'])
-    
     if request.method == 'POST':
         assert(request_info['modules'] is not None and request_info['module_display_indices'] is not None and request_info['detailed_views'] is not None)
         modules = Module.get_modules_from_json(request_info['modules'])
@@ -270,8 +193,6 @@ def recommender_displayModules(request, state, prev_state, request_id):
         detailed_views = json.loads(request_info['detailed_views'])
         modules_dict = json.loads(request_info['feedback'])
         
-        #print(display_indices)
-        #print([modules[i] for i in display_indices])
         valid, data, moduleButtonPressed = processDisplayModulesPostData(request.POST, [modules[i] for i in display_indices])
         if not valid:
             error_msg = 'You must either select the module "%s", mark it as interesting or mark it as a not-for-me module before submitting feedback for it!' % moduleButtonPressed
@@ -299,9 +220,7 @@ def recommender_displayModules(request, state, prev_state, request_id):
             
             request_info['module_display_indices'] = json.dumps(display_indices)
             request_info['module_remaining_indices'] = json.dumps(remaining_indices)
-            request_info['feedback'] = json.dumps(modules_dict)
-            
-            
+            request_info['feedback'] = json.dumps(modules_dict)        
             return HttpResponseRedirect(reverse('modulo:modulo-recommender', args=[UserState.DISPLAY_MODULES.value, state.value, request_id]))
  
         if 'details' in data.keys():
@@ -336,6 +255,7 @@ def recommender_displayModules(request, state, prev_state, request_id):
             request_info['module_remaining_indices'] = json.dumps(remaining_indices)
             request_info['detailed_views'] = json.dumps(detailed_views)
             request_info['feedback'] = json.dumps(modules_dict)
+        
         else:
             modules = Module.get_modules_from_json(request_info['modules'])
             display_indices = json.loads(request_info['module_display_indices'])
@@ -371,8 +291,12 @@ def recommender_updateFilters(request, state, request_id):
     # if this is a POST request we need to process the form data
     if request.method == 'POST':
         # create a form instance and populate it with data from the request:
-        form = ModuleForm(request.POST)
-        #form = RecommenderForm(request.POST)
+        if 'moduleForm' in request.POST:
+            form = ModuleForm(request.POST)
+        elif 'advancedForm' in request.POST:
+            form = AdvancedRecommenderForm(request.POST)
+        else:
+            form = None
         
         # check whether it's valid:
         if form.is_valid():
@@ -386,24 +310,28 @@ def recommender_updateFilters(request, state, request_id):
                 request_info['module_remaining_indices'] = None
                 request_info['detailed_views'] = None
                 request_info['feedback'] = None
-            
+                request_info['advancedForm'] = isinstance(form, AdvancedRecommenderForm)
             # redirect to a new URL:
             return HttpResponseRedirect(reverse('modulo:modulo-recommender', args=[UserState.DISPLAY_MODULES.value, state.value, request_id]))
-
-    # if a GET (or any other method) we'll create a form 
-    # with the initial values of the filters from the previous recommendation
-    else:
-        #init_interests = rec.interests
-        init_interests = [Interest.objects.get(name=i).id for i in rec.interests]
-        init_exam = rec.filters['exam'][0] if isinstance(rec.filters['exam'], list) else None #list
-        init_location = rec.filters['location'][0] if isinstance(rec.filters['location'], list) else None #list
-        init_time = rec.filters['time'][0] if rec.filters['time'][0] == rec.filters['time'][1] else None #tuple
-        init_credits = rec.filters['credits'][0] if rec.filters['credits'][0] == rec.filters['credits'][1] else None #tuple
         
-        form = ModuleForm(initial={'interests': init_interests, 'location': init_location, 'exam': init_exam, 'time': init_time, 'credits': init_credits})
-        #form = RecommenderForm(initial={'interests': init_interests, 'location': init_location, 'exam': init_exam, 'time': init_time, 'credits': init_credits})
+        else:
+            template_args = {'id': request_id, 'state': state.value, 'updateFilters': UserState.UPDATE_FILTERS.value}
+            if isinstance(form, AdvancedRecommenderForm):
+                template_args.update({'moduleForm': ModuleForm(initial=ModuleForm.getInitialValuesFromRecommendation(rec)), 'advancedForm': form, 'advanced': True})
+            elif isinstance(form, ModuleForm):
+                template_args.update({'moduleForm': form, 'advancedForm': AdvancedRecommenderForm(initial=AdvancedRecommenderForm.getInitialValuesFromRecommendation(rec)), 'advanced': False})
+            return render(request, 'modulo/recommender_updateFilters.html', template_args)
 
-    return render(request, 'modulo/recommender_updateFilters.html', {'form': form, 'id': request_id, 'state': state.value, 'updateFilters': UserState.UPDATE_FILTERS.value})
+    # if a GET we'll create two forms
+    # with the initial values of the filters from the previous recommendation
+    elif request.method == 'GET':
+        moduleForm = ModuleForm(initial=ModuleForm.getInitialValuesFromRecommendation(rec))
+        advancedForm = AdvancedRecommenderForm(initial=AdvancedRecommenderForm.getInitialValuesFromRecommendation(rec))
+        template_args = {'moduleForm': moduleForm, 'advancedForm': advancedForm, 'advanced': request_info['advancedForm'], 'id': request_id, 'state': state.value, 'updateFilters': UserState.UPDATE_FILTERS.value}
+        return render(request, 'modulo/recommender_updateFilters.html', template_args)
+    
+    else:
+        raise Http404("Unknown method for request %s" % request)
 
 def recommender_seeFeedback(request, state, request_id):
     request_info = getRequestFromActiveRequests(request_id)
@@ -475,10 +403,12 @@ def recommender_seeFeedback(request, state, request_id):
             request_info['feedback'] = json.dumps(modules_dict)
             return HttpResponseRedirect(reverse('modulo:modulo-recommender', args=[UserState.SEE_FEEDBACK.value, state.value, request_id]))
 
-    else:
-        #print("request.method = ", request.method)
+    elif request.method == 'GET':
         detailed_views = json.loads(request_info['detailed_views'])
         return render(request, 'modulo/recommender_seeFeedback.html', {'details': detailed_views, 'seeFeedback': UserState.SEE_FEEDBACK.value, 'displayModules': UserState.DISPLAY_MODULES.value, 'state': state.value, 'id': request_id, 'selected_module': modules_dict['selectedModule'], 'interesting_modules': modules_dict['interestingModules'], 'not_for_me_modules': modules_dict['notForMeModules'], 'seen_modules': modules_dict['seenModules'], 'not_seen_modules': modules_dict['notSeenModules']})
+    
+    else:
+        raise Http404("Unknown method for request %s" % request)
     
 def recommender_thanks(request, state):
     return render(request, 'modulo/recommender_thanks.html', {'state': state.value, 'selectFilters': UserState.SELECT_FILTERS.value})
