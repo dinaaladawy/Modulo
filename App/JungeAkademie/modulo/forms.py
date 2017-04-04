@@ -20,7 +20,7 @@ class AdvancedRecommenderForm(forms.Form):
         examChoices = []
         locationChoices = []
     timeMin = forms.TimeField(initial='00:00', input_formats=['%H:%M'], required=False, label='Min Start Time', widget=forms.TimeInput(format='%H:%M'), error_messages={'invalid': 'Enter a valid time using a "HH:MM" format'}, help_text='This is the lower bound of the starting time interval of your module recommendation. Please use the format "HH:MM".')
-    timeMax = forms.TimeField(initial='23:59', input_formats=['%H:%M'], required=False, label='Max Start Time', widget=forms.TimeInput(format='%H:%M'), error_messages={'invalid': 'Enter a valid time using a "HH:MM" format'}, help_text='This is the lower bound of the starting time interval of your module recommendation. Please use the format "HH:MM".')
+    timeMax = forms.TimeField(initial='23:59', input_formats=['%H:%M'], required=False, label='Max Start Time', widget=forms.TimeInput(format='%H:%M'), error_messages={'invalid': 'Enter a valid time using a "HH:MM" format'}, help_text='This is the upper bound of the starting time interval of your module recommendation. Please use the format "HH:MM".')
     creditsMin = forms.FloatField(initial=0, min_value=0.0, label='Min Credits', required=False, help_text='This is the desired lowest amount of credits of your module recommendation.')
     creditsMax = forms.FloatField(min_value=0.0, label='Max Credits', required=False, help_text='This is the desired highest amount of credits of your module recommendation.')
     exam = forms.TypedMultipleChoiceField(choices=examChoices, label='Exam Types', required=False, widget=autocomplete.Select2Multiple(url='modulo:exam-autocomplete', attrs={'data-placeholder': 'Select exam types...'}), help_text='These are the available exam types. You can select multiple exam types.')
@@ -110,7 +110,6 @@ class InterestForm(forms.ModelForm):
     except DatabaseError:
         choices = []
     interests = forms.TypedMultipleChoiceField(required=False, choices=choices, widget=autocomplete.Select2Multiple(url='modulo:interest-autocomplete'))
-
 
 class ModuleForm(forms.ModelForm):
     try:
