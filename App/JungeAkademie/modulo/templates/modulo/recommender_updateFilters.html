@@ -4,16 +4,45 @@
 
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 
-<form action="{% url 'modulo:modulo-recommender' updateFilters state id %}" method="post">
+{% autoescape off %}
+<form id="moduleForm" action="{% url 'modulo:modulo-recommender' updateFilters state id %}" method="post">
 	{% csrf_token %}
-	{{ form.as_p }}
 	{{ moduleForm.as_p }}
-	{{ interestForm.as_p }}
-	
-	<input type="reset" value="Reset filters" /><input type="submit" value="Update filters" />
+	<input type="reset" value="Reset filters" /><input type="submit" name="moduleForm" value="Update filters" />
 </form>
 
+<form id="advancedForm" action="{% url 'modulo:modulo-recommender' updateFilters state id %}" method="post">
+	{% csrf_token %}
+	{{ advancedForm.as_p }}
+	<input type="reset" value="Reset filters" /><input type="submit" name="advancedForm" value="Update filters" />
+</form>
+{% endautoescape %}
+
+<button id="filterSelect" onclick="changeFormToDisplay()"></button>
+
 <script type="text/javascript" src="{% static 'admin/js/vendor/jquery/jquery.js' %}"></script>
-{{ form.media }}
 {{ moduleForm.media }}
-{{ interestForm.media }}
+{{ advancedForm.media }}
+
+<script>
+{% if advanced %}
+var displayAdvancedForm = true
+{% else %}
+var displayAdvancedForm = false
+{% endif %}
+changeFormToDisplay()
+
+function changeFormToDisplay(){
+	if (displayAdvancedForm){
+		document.getElementById("advancedForm").style.display="block"
+		document.getElementById("moduleForm").style.display="none"
+		document.getElementById("filterSelect").innerHTML = 'normal filters'
+	}
+	else{
+		document.getElementById("moduleForm").style.display="block"
+		document.getElementById("advancedForm").style.display="none"
+		document.getElementById("filterSelect").innerHTML = 'advanced filters'
+	}
+	displayAdvancedForm = !displayAdvancedForm
+}
+</script>

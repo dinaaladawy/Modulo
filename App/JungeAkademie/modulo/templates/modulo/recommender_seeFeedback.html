@@ -2,8 +2,9 @@
 
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 
-<p id="output"></p> 
+<p id="output"></p>
 
+{% autoescape off %}
 {% if selected_module %}
 	<strong>Selected module:</strong> <u>{{ selected_module }}</u><br>
 	{% if selected_module in details %}
@@ -108,8 +109,6 @@
 </form>
 
 <script>
-//var modules = []
-var selectedModule = ""
 var nrSelectedModule = 0
 var nrInterestingModules = 0
 var interestingModulesSelected = []
@@ -118,27 +117,23 @@ var notForMeModulesSelected = []
 
 
 function confirmTxt(newSelectedModule){
-	document.getElementById("output").innerHTML = selectedModule
-	return "You can only have one selected module.\nBy proceeding you will override the selected module \""+selectedModule+"\" with \""+newSelectedModule+"\".\nProceed?"
+	//document.getElementById("output").innerHTML = "{{selected_module}}"
+	return "You can only have one selected module.\nBy proceeding you will override the selected module \""+"{{ selected_module }}"+"\" with \""+newSelectedModule+"\".\nProceed?"
 }
 
 addModules()
 function addModules() {
 	{% if selected_module %}
-		//modules[modules.length] = "{{ selected_module }}"
 		nrSelectedModule = 1
-		selectedModule = "{{ selected_module }}".replace(/&#39;/g, "'");
 	{% endif %}
 	{% if interesting_modules %}
 		{% for m in interesting_modules %}
-			//modules[modules.length] = "{{ m }}"
 			interestingModulesSelected[interestingModulesSelected.length] = false
 			nrInterestingModules += 1
 		{% endfor %}		
 	{% endif %}
 	{% if not_for_me_modules %}
 		{% for m in not_for_me_modules %}
-			//modules[modules.length] = "{{ m }}"
 			notForMeModulesSelected[notForMeModulesSelected.length] = false
 			nrNotForMeModules += 1
 		{% endfor %}
@@ -147,7 +142,7 @@ function addModules() {
 }
 
 function selectModule(feedbackType, moduleNr) {
-	document.getElementById("output").innerHTML = "Selecting module no. "+moduleNr+" from feedback = "+feedbackType+"; nrSelectedModule="+nrSelectedModule+"; nrInterestingModules="+nrInterestingModules+"; nrNotForMeModules="+nrNotForMeModules
+	//document.getElementById("output").innerHTML = "Selecting module no. "+moduleNr+" from feedback = "+feedbackType+"; nrSelectedModule="+nrSelectedModule+"; nrInterestingModules="+nrInterestingModules+"; nrNotForMeModules="+nrNotForMeModules
 	if (feedbackType === "interesting"){
 		interestingModulesSelected[moduleNr] = true
 	}
@@ -157,7 +152,7 @@ function selectModule(feedbackType, moduleNr) {
 }
 
 function unselectModule(feedbackType, moduleNr){
-	document.getElementById("output").innerHTML = "Unselecting module no. "+moduleNr+" from feedback = "+feedbackType+"; nrSelectedModule="+nrSelectedModule+"; nrInterestingModules="+nrInterestingModules+"; nrNotForMeModules="+nrNotForMeModules
+	//document.getElementById("output").innerHTML = "Unselecting module no. "+moduleNr+" from feedback = "+feedbackType+"; nrSelectedModule="+nrSelectedModule+"; nrInterestingModules="+nrInterestingModules+"; nrNotForMeModules="+nrNotForMeModules
 	if (feedbackType === "interesting" && interestingModulesSelected[moduleNr]){
 		interestingModulesSelected[moduleNr] = false
 	}
@@ -167,14 +162,13 @@ function unselectModule(feedbackType, moduleNr){
 }
 
 function submitForm(feedbackType, moduleNr, moduleName){
-	document.getElementById("output").innerHTML = "Submitting form: module "+moduleNr+" from feedback = "+feedbackType+"; 	nrSelectedModule="+nrSelectedModule+"; nrInterestingModules="+nrInterestingModules+" and interestingModulesSelected="+interestingModulesSelected+"; nrNotForMeModules="+nrNotForMeModules+" and notForMeModulesSelected="+notForMeModulesSelected
-	if (nrSelectedModule == 1){
-		if ((feedbackType === "interesting" && interestingModulesSelected[moduleNr]) || (feedbackType === "notForMe" && notForMeModulesSelected[moduleNr])){
-			return confirm(confirmTxt(moduleName));
-		}
+	//document.getElementById("output").innerHTML = "Submitting form: module "+moduleNr+" from feedback = "+feedbackType+"; 	nrSelectedModule="+nrSelectedModule+"; nrInterestingModules="+nrInterestingModules+" and interestingModulesSelected="+interestingModulesSelected+"; nrNotForMeModules="+nrNotForMeModules+" and notForMeModulesSelected="+notForMeModulesSelected
+	if (nrSelectedModule == 1 && ((feedbackType === "interesting" && interestingModulesSelected[moduleNr]) || (feedbackType === "notForMe" && notForMeModulesSelected[moduleNr])){
+		return confirm(confirmTxt(moduleName));
 	}
 	else{
 		return true
 	}
 }
 </script>
+{% endautoescape %}
