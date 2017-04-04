@@ -105,8 +105,8 @@ class Module(models.Model):
     
     id =            models.AutoField(primary_key=True)
     title =         models.CharField(max_length=100, default='')
-    time =          models.TimeField(default='00:00')
-    credits =       models.IntegerField(default=0)
+    time =          models.TimeField(blank=True, null=True, default='00:00') #models.TimeField(default=None)
+    credits =       models.IntegerField(blank=True, null=True, default=0)
     #place =         models.IntegerField(choices=LOCATIONS, default=Location.NOT_SPECIFIED)
     location =      models.ForeignKey(Location, default=None, blank=True, null=True, on_delete=models.CASCADE)
     #exam =          models.IntegerField(choices=EXAM_TYPES, default=Exam.NOT_SPECIFIED)

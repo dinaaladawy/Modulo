@@ -6,7 +6,7 @@ Created on Mon Mar 13 14:11:11 2017
 """
 
 from .algorithms import UpdateType, LinearClassifier
-from .models import Exam, Location, Interest, Category, Module
+from .models import Interest, Category, Module
 from django.db.models.signals import pre_save, pre_delete
 from django.db import DatabaseError
 from django.dispatch import receiver
@@ -202,13 +202,14 @@ class Recommender():
         filters = copy.deepcopy(rec.filters)
         format = '%H:%M'; timeInterval = filters['time']
         filters['time'] = (timeInterval[0].strftime(format), timeInterval[1].strftime(format))
+        '''
         e = filters['exam']
         #filters['exam'] = [exam.exam_type for exam in e] if isinstance(e, list) else e.exam_type if isinstance(e, Exam) else None
         filters['exam'] = [exam.exam_type for exam in e] if isinstance(e, list) else None
         l = filters['location']
         #filters['location'] = [loc.location for loc in l] if isinstance(l, list) else l.location if isinstance(l, Location) else None
         filters['location'] = [loc.location for loc in l] if isinstance(l, list) else None
-        
+        '''
         feedback = copy.deepcopy(getattr(rec, 'feedback', {}))
         for key, value in feedback.items():
             #save the id of the modules
@@ -238,22 +239,23 @@ class Recommender():
         if 'filters' in cleanup_json_object:
             filters = cleanup_json_object['filters']
             if 'exam' in filters:
-                #list of strings or none
+                #list of strings or empty list
                 #exam_types = [Exam.objects.get(exam_type__icontains=e) for e in filters['exam']] if isinstance(filters['exam'], list) else Exam.objects.get(exam_type__icontains=filters['exam']) if isinstance(filters['exam'], str) else None
-                exam_types = [Exam.objects.get(exam_type__iexact=e) for e in filters['exam']] if isinstance(filters['exam'], list) else None
-                r.updateFilters(examType=exam_types)
+                #exam_types = [Exam.objects.get(exam_type__iexact=e) for e in filters['exam']] if isinstance(filters['exam'], list) else None
+                r.updateFilters(examType=filters['exam'])
             if 'time' in filters:
-                #Tuple of datetime.time
+                #2-tuple of datetime.time
                 format = '%H:%M'
                 timeInterval = (datetime.datetime.strptime(filters['time'][0], format).time(), datetime.datetime.strptime(filters['time'][1], format).time())
                 r.updateFilters(timeInterval=timeInterval)
             if 'location' in filters:
-                #list of strings or none
+                #list of strings or empty list
                 #locations = [Location.objects.get(location__icontains=l) for l in filters['location']] if isinstance(filters['location'], list) else Location.objects.get(location__icontains=filters['location']) if isinstance(filters['location'], str) else None
-                locations = [Location.objects.get(location__iexact=l) for l in filters['location']] if isinstance(filters['location'], list) else None
-                r.updateFilters(location=locations)
+                #locations = [Location.objects.get(location__iexact=l) for l in filters['location']] if isinstance(filters['location'], list) else None
+                r.updateFilters(location=filters['location'])
             if 'credits' in filters:
-                #tuple of Integers
+                #2-tuple of Integers; 
+                #filters['credits'] is a list!!! -> convert it to tuple
                 credit_tuple = (filters['credits'][0], filters['credits'][1])
                 r.updateFilters(credits=credit_tuple)
             if 'categories' in filters:
