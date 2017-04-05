@@ -42,8 +42,8 @@ def validateState(current_state, previous_state, request_id):
     return True
 
 def processForm(form, rec):
-    # process the data in form.cleaned_data as required    
-    rec.updateFilters(location=form.processLocation(), timeInterval=form.processTime(), examType=form.processExam(), credits=form.processCredits(), interests=form.processInterests())
+    # process the data in form.cleaned_data as required
+    rec.updateFilters(timeInterval=form.processTime(), credits=form.processCredits(), exam_types=form.processExam(), locations=form.processLocation(), interests=form.processInterests())
     return rec
 
 def processDisplayModulesPostData(post_data, displayed_modules):
@@ -303,7 +303,7 @@ def recommender_updateFilters(request, state, request_id):
             oldInterests = copy.deepcopy(rec.interests)
             oldFilters = copy.deepcopy(rec.filters)
             newRec = processForm(form, rec)
-            if oldFilters != newRec.filters or oldInterests != newRec.interests:
+            if oldFilters != newRec.filters or set(oldInterests) != set(newRec.interests):
                 request_info['recommendation'] = json.dumps(newRec, cls=HandleRecommender)
                 request_info['modules'] = None
                 request_info['module_display_indices'] = None
