@@ -11,12 +11,14 @@ from .forms import ModuleForm, AdvancedRecommenderForm
 from .feedback import Feedback
 from .models import Module, HandleModule
 from .recommender import Recommender, HandleRecommender
-import copy, enum, json, re
+import copy, datetime, enum, json, re, threading
 
 #list containing dictionary {recommendation, recommended_modules, display_indices, detailed_indices, feedback}
 activeRequestList = None
 allowed_transitions = None
 id_counter = None
+requestListLock = None
+max_inactive_time = None
 
 class UserState(enum.Enum):
     SELECT_FILTERS = 0
@@ -26,12 +28,23 @@ class UserState(enum.Enum):
     THANKS = 4
 
 def getRequestFromActiveRequests(request_id):
-    global activeRequestList
-    r = r'"id": '+str(request_id)+r'[,}]' #pattern to find in recommendation json_object
-    for req in activeRequestList[:]:
-        if re.search(r, req['recommendation']):
-            return req
-    return None
+    request = None
+    error_msg = 'rec not-found'
+    with requestListLock:
+        global activeRequestList, max_inactive_time
+        r = r'"id": '+str(request_id)+r'[,}]' #pattern to find in recommendation json_object
+        for req in activeRequestList[:]:
+            if datetime.datetime.now() - req['last_accessed'] > max_inactive_time:
+                activeRequestList.remove(req)
+                if re.search(r, req['recommendation']):
+                    error_msg = 'time\'s-up'
+            elif re.search(r, req['recommendation']):
+                assert(request_id == req['id'])
+                req['last_accessed'] = datetime.datetime.now()
+                request = req
+                error_msg = None
+                break
+    return request, error_msg
     
 def validateState(current_state, previous_state, request_id):
     global allowed_transitions
@@ -109,6 +122,12 @@ def processSeeFeedbackPostData(post_data, module_dict):
         data['details'] = d
     return valid, data, moduleButtonPressed
 
+def submitFeedback(rec, modules_dict):
+    #incorporate feedback into the system
+    f = Feedback(recommendation=rec);
+    f.updateFeedback(**modules_dict)
+    f.setFeedback()
+
 def recommender_state_machine(request, state='0', prev_state=None, request_id=None):
     state = UserState(int(state))
     if prev_state is not None:
@@ -146,13 +165,15 @@ def recommender_selectFilters(request, state):
         if form.is_valid():
             global activeRequestList, id_counter
             rec = processForm(form, Recommender(id=id_counter))
-            request_info = {'recommendation': json.dumps(rec, cls=HandleRecommender), 
+            request_info = {'id': id_counter,
+                            'recommendation': json.dumps(rec, cls=HandleRecommender), 
                             'modules': None, 
                             'module_display_indices': None, 
                             'module_remaining_indices': None, 
                             'detailed_views': None, 
                             'feedback': None,
-                            'advancedForm': isinstance(form, AdvancedRecommenderForm)}
+                            'advancedForm': isinstance(form, AdvancedRecommenderForm),
+                            'last_accessed': datetime.datetime.now()}
             activeRequestList.append(request_info)
             id_counter += 1
             # redirect to a new URL:
@@ -176,13 +197,13 @@ def recommender_selectFilters(request, state):
         raise Http404("Unknown method for request %s" % request)
 
 def recommender_displayModules(request, state, prev_state, request_id):
-    request_info = getRequestFromActiveRequests(request_id)
+    request_info, error_msg = getRequestFromActiveRequests(request_id)
     if request_info is None:
         global activeRequestList, id_counter
         #print("id_counter: ", id_counter)
         #print("request list: ", activeRequestList)
         request_string = (request.META['SERVER_NAME']+":"+request.META['SERVER_PORT']+request.path)
-        return render(request, 'modulo/recommender_error.html', {'error_msg': "No recommendation available with id %d at request %s" % (request_id, request_string)})
+        return render(request, 'modulo/recommender_error.html', {'error_message': "Error message: \"%s\". No recommendation available with id %d at request %s" % (error_msg, request_id, request_string)})
     else:
         rec = Recommender.get_recommendation_from_json(request_info['recommendation'])
     
@@ -193,6 +214,11 @@ def recommender_displayModules(request, state, prev_state, request_id):
         detailed_views = json.loads(request_info['detailed_views'])
         modules_dict = json.loads(request_info['feedback'])
         
+        if 'submitFeedback' in request.POST:
+            submitFeedback(rec, modules_dict)
+            activeRequestList.remove(request_info)
+            return HttpResponseRedirect(reverse('modulo:modulo-recommender', args=[UserState.THANKS.value, state.value]))
+        
         valid, data, moduleButtonPressed = processDisplayModulesPostData(request.POST, [modules[i] for i in display_indices])
         if not valid:
             error_msg = 'You must either select the module "%s", mark it as interesting or mark it as a not-for-me module before submitting feedback for it!' % moduleButtonPressed
@@ -200,7 +226,7 @@ def recommender_displayModules(request, state, prev_state, request_id):
             if modules_dict['selectedModule'] is not None:
                 template_args.update({'selected_module': modules_dict['selectedModule']})
             return render(request, 'modulo/recommender_displayModules.html', template_args)
-            
+           
         if 'feedback' in data.keys():
             remaining_indices = json.loads(request_info['module_remaining_indices'])
             if data['feedback']['feedbackType'] == 'selectedModule':
@@ -264,13 +290,14 @@ def recommender_displayModules(request, state, prev_state, request_id):
             modules_dict = json.loads(request_info['feedback'])
             
         template_args = {'id': request_id, 'modules': [modules[i] for i in display_indices], 'details': detailed_views, 'state': state.value, 'displayModules': UserState.DISPLAY_MODULES.value, 'updateFilters': UserState.UPDATE_FILTERS.value, 'seeFeedback': UserState.SEE_FEEDBACK.value}
+        template_args.update({'feedback_provided': modules_dict['selectedModule'] != None or modules_dict['interestingModules'] != [] or modules_dict['notForMeModules'] != []})
         if modules_dict['selectedModule'] is not None:
             template_args.update({'selected_module': modules_dict['selectedModule']})
         if len(modules) == 0:
             error_msg = "There are no modules which match your current filters. Try updating them using the button below!"
             template_args.update({'error_message': error_msg})
         elif len(display_indices) == 0:
-            error_msg = "Thank you for providing feedback to every module. You can now review the provided feedback (SEE FEEDBACK) and from there submit it so that the system can learn to make better recommendations!"
+            error_msg = "Thank you for providing feedback to every module. You can now review the provided feedback (SEE FEEDBACK) or directly submit the feedback so that the system can learn to make better recommendations! You can also change your recommendation filters, but this will clear the provided feedback from your current recommendation."
             template_args.update({'error_message': error_msg})
         return render(request, 'modulo/recommender_displayModules.html', template_args)
     
@@ -278,13 +305,13 @@ def recommender_displayModules(request, state, prev_state, request_id):
         raise Http404("Unknown method for request %s" % request)
 
 def recommender_updateFilters(request, state, request_id):
-    request_info = getRequestFromActiveRequests(request_id)
+    request_info, error_msg = getRequestFromActiveRequests(request_id)
     if request_info is None:
         global activeRequestList, id_counter
-        #print(id_counter)
-        #print(activeRequestList)
+        #print("id_counter: ", id_counter)
+        #print("request list: ", activeRequestList)
         request_string = (request.META['SERVER_NAME']+":"+request.META['SERVER_PORT']+request.path)
-        return render(request, 'modulo/recommender_error.html', {'error_msg': "No recommendation available with id %d at request %s" % (request_id, request_string)})
+        return render(request, 'modulo/recommender_error.html', {'error_message': "Error message: \"%s\". No recommendation available with id %d at request %s" % (error_msg, request_id, request_string)})
     else:
         rec = Recommender.get_recommendation_from_json(request_info['recommendation'])
     
@@ -311,6 +338,7 @@ def recommender_updateFilters(request, state, request_id):
                 request_info['detailed_views'] = None
                 request_info['feedback'] = None
                 request_info['advancedForm'] = isinstance(form, AdvancedRecommenderForm)
+                request_info['last_accessed'] = datetime.datetime.now()
             # redirect to a new URL:
             return HttpResponseRedirect(reverse('modulo:modulo-recommender', args=[UserState.DISPLAY_MODULES.value, state.value, request_id]))
         
@@ -334,10 +362,10 @@ def recommender_updateFilters(request, state, request_id):
         raise Http404("Unknown method for request %s" % request)
 
 def recommender_seeFeedback(request, state, request_id):
-    request_info = getRequestFromActiveRequests(request_id)
+    request_info, error_msg = getRequestFromActiveRequests(request_id)
     if request_info is None:
         request_string = (request.META['SERVER_NAME']+":"+request.META['SERVER_PORT']+request.path)
-        return render(request, 'modulo/recommender_error.html', {'error_msg': "No recommendation available with id %d at request %s" % (request_id, request_string)})
+        return render(request, 'modulo/recommender_error.html', {'error_message': "Error message: \"%s\". No recommendation available with id %d at request %s" % (error_msg, request_id, request_string)})
     else:
         rec = Recommender.get_recommendation_from_json(request_info['recommendation'])
     
@@ -345,7 +373,7 @@ def recommender_seeFeedback(request, state, request_id):
     modules_dict = json.loads(request_info['feedback'])
     
     if not (modules_dict['selectedModule'] or modules_dict['interestingModules'] or modules_dict['notForMeModules']):
-        return render(request, 'modulo/recommender_error.html', {'error_msg': "You haven't selected any feedback to see.", 'next_action': [UserState.DISPLAY_MODULES.value], 'state': state.value, 'id': request_id})
+        return render(request, 'modulo/recommender_error.html', {'error_message': "You haven't selected any feedback to see.", 'next_action': [UserState.DISPLAY_MODULES.value], 'state': state.value, 'id': request_id})
     
     if request.method == 'POST':
         valid, data, moduleButtonPressed = processSeeFeedbackPostData(request.POST, modules_dict)
@@ -355,10 +383,7 @@ def recommender_seeFeedback(request, state, request_id):
             return render(request, 'modulo/recommender_seeFeedback.html', {'error_message': error_msg, 'details': detailed_views, 'seeFeedback': UserState.SEE_FEEDBACK.value, 'displayModules': UserState.DISPLAY_MODULES.value, 'state': state.value, 'id': request_id, 'selected_module': modules_dict['selectedModule'], 'interesting_modules': modules_dict['interestingModules'], 'not_for_me_modules': modules_dict['notForMeModules'], 'seen_modules': modules_dict['seenModules'], 'not_seen_modules': modules_dict['notSeenModules']})
         
         if 'submitFeedback' in data.keys():
-            #incorporate feedback into the system
-            f = Feedback(recommendation=rec);
-            f.updateFeedback(**modules_dict)
-            f.setFeedback()
+            submitFeedback(rec, modules_dict)
             activeRequestList.remove(request_info)
             return HttpResponseRedirect(reverse('modulo:modulo-recommender', args=[UserState.THANKS.value, state.value]))
         
@@ -414,9 +439,8 @@ def recommender_thanks(request, state):
     return render(request, 'modulo/recommender_thanks.html', {'state': state.value, 'selectFilters': UserState.SELECT_FILTERS.value})
 
 def initialize():
-    global activeRequestList, allowed_transitions, id_counter
+    global activeRequestList, allowed_transitions, id_counter, requestListLock, max_inactive_time
     activeRequestList = []
-    id_counter = 0
     allowed_transitions = [
         # initial transition
         (None, UserState.SELECT_FILTERS),
@@ -434,6 +458,10 @@ def initialize():
         (UserState.DISPLAY_MODULES, UserState.SEE_FEEDBACK),
         (UserState.SEE_FEEDBACK, UserState.SEE_FEEDBACK),
         
-        (UserState.SEE_FEEDBACK, UserState.THANKS)
+        (UserState.SEE_FEEDBACK, UserState.THANKS),
+        (UserState.DISPLAY_MODULES, UserState.THANKS)
     ]
+    id_counter = 0
+    requestListLock = threading.Lock()
+    max_inactive_time = datetime.timedelta(weeks=0, days=0, hours=0, minutes=1, seconds=0, milliseconds=0, microseconds=0)
     print("views_recommender initialized")

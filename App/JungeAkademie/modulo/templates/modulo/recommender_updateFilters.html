@@ -8,13 +8,13 @@
 <form id="moduleForm" action="{% url 'modulo:modulo-recommender' updateFilters state id %}" method="post">
 	{% csrf_token %}
 	{{ moduleForm.as_p }}
-	<input type="reset" value="Reset filters" /><input type="submit" name="moduleForm" value="Update filters" />
+	<input type="reset" value="Reset filters" /><input type="submit" name="moduleForm" value="Update filters ->" />
 </form>
 
 <form id="advancedForm" action="{% url 'modulo:modulo-recommender' updateFilters state id %}" method="post">
 	{% csrf_token %}
 	{{ advancedForm.as_p }}
-	<input type="reset" value="Reset filters" /><input type="submit" name="advancedForm" value="Update filters" />
+	<input type="reset" value="Reset filters" /><input type="submit" name="advancedForm" value="Update filters ->" />
 </form>
 {% endautoescape %}
 

@@ -34,12 +34,20 @@
 	<br><br>
 {% endfor %}
 <br>
-<form action="{% url 'modulo:modulo-recommender' updateFilters state id %}" method="get">
-	<input type="submit" value="Update filters" />
+<form action="{% url 'modulo:modulo-recommender' updateFilters state id %}" method="get" style="display: inline;">
+	<input type="submit" value="<- Update filters" />
 </form>
-<form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" method="get">
-	<input type="submit" value="See feedback" />
+<form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" method="get" style="display: inline;">
+	<input type="submit" value="See feedback ->" />
 </form>
+{% if feedback_provided %}
+<form action="{% url 'modulo:modulo-recommender' displayModules state id %}" method="post" style="display: inline;">
+	{% csrf_token %}
+	<input type="submit" name="submitFeedback" value="Submit feedback -->" />
+</form>
+{% endif %}
+<!-- <a href="{% url 'modulo:modulo-recommender' updateFilters state id %}" class="button">Update filters <-</a> -->
+<!-- <a href="{% url 'modulo:modulo-recommender' seeFeedback state id %}" class="button">See feedback -></a> -->
 
 <script>
 var nrSelectedModule = 0

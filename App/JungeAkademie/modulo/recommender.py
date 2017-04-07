@@ -10,7 +10,7 @@ from .models import Interest, Category, Module
 from django.db.models.signals import pre_save, pre_delete
 from django.db import DatabaseError
 from django.dispatch import receiver
-import datetime, json, copy
+import datetime, json, copy, threading
 
 class HandleRecommender(json.JSONEncoder):
      """ json.JSONEncoder extension: handle Recommender """
@@ -21,12 +21,13 @@ class HandleRecommender(json.JSONEncoder):
 
 class Recommender():
     savedRecommendationsFile = '../recommendations.txt'
+    savedRecommendationsFileLock = None
     #name of all categories
-    category_names=[]
+    category_names = []
     #name of all interests
-    interest_names=[]
+    interest_names = []
     #selected learning algorithm
-    learning_algorithm=None
+    learning_algorithm = None
     
     def __init__(self, 
                  id=None, 
@@ -87,7 +88,7 @@ class Recommender():
                 for c in module_value.all():
                     print(c.name, ', ', sep='', end='')
                 print(']')
-        #''' 
+        #'''
         for key, value in self.filters.items():
             module_value = getattr(m, key)
             if key == 'time':
@@ -130,7 +131,7 @@ class Recommender():
         return [modules[i] for i in order]
     
     def initialize():
-        #print("Initializing the weight matrix of the recommender system!")
+        Recommender.savedRecommendationsFileLock = threading.Lock()
         #get the number of categories in the database
         try:
             categories = list(Category.objects.all())
@@ -192,7 +193,7 @@ class Recommender():
             self.save()
     
     def save(self):
-        with open(Recommender.savedRecommendationsFile, "a") as file:
+        with Recommender.savedRecommendationsFileLock, open(Recommender.savedRecommendationsFile, "a") as file:
             rec_serialized = json.dumps(self, cls=HandleRecommender)
             file.write(rec_serialized + "\n")
         

@@ -1,19 +1,42 @@
-<strong>{{ error_msg }}</strong>
+{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 
 {% if next_action %}
 	{% for a in next_action %}
-	<form action="{% url 'modulo:modulo-recommender' a state id %}" method="get"> 
-		{% if a == 0 %}
-			<input type="submit" value="Get new recommendation" />
-		{% elif a == 1 %}
-			<input type="submit" value="Display modules" />
-		{% elif a == 2 %}
-			<input type="submit" value="Update filters" />
-		{% elif a == 3 %}
-			<input type="submit" value="See feedback" />
-		{% else %}
-		{% endif %}
-	</form>
+		<form action="{% url 'modulo:modulo-recommender' a state id %}" method="get"> 
+			<input id="button{{ forloop.counter }}" type="submit" value="" />
+		</form>
+		
+		<script>
+			var leftArrow = "<-"
+			var rightArrow = "->"
+			
+			function getButtonDisplayValue(nextState, currentState, buttonNr){
+				var buttonID = "button"+buttonNr
+				var displayString = (currentState > nextState ? leftArrow : "")
+				switch (nextState) {
+					case 0:{
+						displayString += "Get new recommendation"
+						break;
+					}
+					case 1:{
+						displayString += "Display modules"
+						break;
+					}
+					case 2:{
+						displayString += "Update filters"
+						break;
+					}
+					case 3:{
+						displayString += "See feedback"
+						break;
+					}
+				}
+				displayString += (currentState < nextState ? rightArrow : "")
+				document.getElementById(buttonID).value = displayString
+				return displayString
+			}
+			getButtonDisplayValue({{a}}, {{state}}, {{forloop.counter}})
+		</script>
 	{% endfor %}
 {% else %}
 	<form action="{% url 'modulo:modulo-recommender' %}" method="get"> 

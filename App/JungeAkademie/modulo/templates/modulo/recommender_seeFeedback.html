@@ -100,12 +100,12 @@
 	<br>
 {% endif %}
 
-<form action="{% url 'modulo:modulo-recommender' displayModules state id %}" method="get">
-	<input type="submit" value="View recommendation" />
+<form action="{% url 'modulo:modulo-recommender' displayModules state id %}" method="get" style="display:inline">
+	<input type="submit" value="<- View recommendation" />
 </form>
 <form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" method="post">
 	{% csrf_token %}
-	<input type="submit" name="submitFeedback" value="Submit feedback" />
+	<input type="submit" name="submitFeedback" value="Submit feedback ->" />
 </form>
 
 <script>
