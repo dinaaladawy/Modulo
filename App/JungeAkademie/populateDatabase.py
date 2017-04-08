@@ -19,17 +19,19 @@ from databaseHelpers.insertCourseFormats import insertCourseFormats
 from databaseHelpers.insertPersonalities import insertPersonalities
 
 databaseFile = './database.xlsx'
+
+def populateDatabase():
+    insertExams(databaseFile)
+    insertLanguages(databaseFile)
+    insertLocations(databaseFile)
+    insertCourseFormats(databaseFile)
+    insertPersonalities(databaseFile)
     
-insertExams(databaseFile)
-insertLanguages(databaseFile)
-insertLocations(databaseFile)
-insertCourseFormats(databaseFile)
-insertPersonalities(databaseFile)
-
-insertInterests(databaseFile)
-insertCategories(databaseFile)
-#insertTestPersons(databaseFile)
-insertModules(databaseFile) #MUST BE LAST THING TO BE UPDATED
-
+    insertInterests(databaseFile)
+    insertCategories(databaseFile)
+    #insertTestPersons(databaseFile)
+    insertModules(databaseFile) #MUST BE LAST THING TO BE UPDATED
+             
 if __name__ == '__main__':
+    populateDatabase()
     input("Press ENTER to exit program...")

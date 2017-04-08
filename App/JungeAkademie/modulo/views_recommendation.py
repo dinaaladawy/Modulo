@@ -11,12 +11,14 @@ from .forms import ModuleForm, AdvancedRecommenderForm
 from .feedback import Feedback
 from .models import Module, HandleModule
 from .recommender import Recommender, HandleRecommender
-import copy, enum, json, re
+import copy, datetime, enum, json, re, threading
 
 #list containing dictionary {recommendation, recommended_modules, display_indices, detailed_indices, feedback}
 activeRequestList = None
 allowed_transitions = None
 id_counter = None
+requestListLock = None
+max_inactive_time = None
 
 class UserState(enum.Enum):
     SELECT_FILTERS = 0
@@ -24,22 +26,61 @@ class UserState(enum.Enum):
     UPDATE_FILTERS = 2
     SEE_FEEDBACK = 3
     THANKS = 4
+    
+    def fromString(val):
+        if val == "selectFilters":
+            return UserState.SELECT_FILTERS
+        elif val == "displayModules":
+            return UserState.DISPLAY_MODULES
+        elif val == "updateFilters":
+            return UserState.UPDATE_FILTERS
+        elif val == "seeFeedback":
+            return UserState.SEE_FEEDBACK
+        elif val == "thanks":
+            return UserState.THANKS
+        else:
+            return None
+        
+    def toString(self):
+        if self.value == 0:
+            return "selectFilters"
+        elif self.value == 1:
+            return "displayModules"
+        elif self.value == 2:
+            return "updateFilters"
+        elif self.value == 3:
+            return "seeFeedback"
+        elif self.value == 4:
+            return "thanks"
+        else:
+            return None
+
+def printSessionContent(session):
+    for key, value in session.items():
+        print("Key:", key, "with value:", value, "and value type:", type(value))
 
 def getRequestFromActiveRequests(request_id):
-    global activeRequestList
-    r = r'"id": '+str(request_id)+r'[,}]' #pattern to find in recommendation json_object
-    for req in activeRequestList[:]:
-        if re.search(r, req['recommendation']):
-            return req
-    return None
+    request = None
+    error_msg = 'rec not-found'
+    with requestListLock:
+        global activeRequestList, max_inactive_time
+        r = r'"id": '+str(request_id)+r'[,}]' #pattern to find in recommendation json_object
+        for req in activeRequestList[:]:
+            if datetime.datetime.now() - req['last_accessed'] > max_inactive_time:
+                activeRequestList.remove(req)
+                if re.search(r, req['recommendation']):
+                    error_msg = 'time\'s-up'
+            elif re.search(r, req['recommendation']):
+                assert(request_id == req['id'])
+                req['last_accessed'] = datetime.datetime.now()
+                request = req
+                error_msg = None
+                break
+    return request, error_msg
     
-def validateState(current_state, previous_state, request_id):
+def validateSessionState(session_current_state, session_previous_state):
     global allowed_transitions
-    if not (previous_state, current_state) in allowed_transitions:
-        return False
-    if request_id is None and current_state in [UserState.DISPLAY_MODULES, UserState.UPDATE_FILTERS, UserState.SEE_FEEDBACK]:
-        return False
-    return True
+    return (session_previous_state, session_current_state) in allowed_transitions
 
 def processForm(form, rec):
     # process the data in form.cleaned_data as required
@@ -109,27 +150,95 @@ def processSeeFeedbackPostData(post_data, module_dict):
         data['details'] = d
     return valid, data, moduleButtonPressed
 
-def recommender_state_machine(request, state='0', prev_state=None, request_id=None):
-    state = UserState(int(state))
-    if prev_state is not None:
-        prev_state = UserState(int(prev_state))
-    if request_id is not None:
-        request_id = int(request_id)
-        
-    if not validateState(state, prev_state, request_id):
-        raise Http404("Invalid state transition..."+"\nCurrent state: "+str(state)+"\nPrevious state: "+str(prev_state)+"\nrequest_id: "+str(request_id))
+def submitFeedback(rec, modules_dict):
+    #incorporate feedback into the system
+    f = Feedback(recommendation=rec);
+    f.updateFeedback(**modules_dict)
+    f.setFeedback()
+
+def session_is_valid(request):
+    if 'in_system' not in request.session:
+        #print("Session has expired...")
+        return False
     
-    if state == UserState.SELECT_FILTERS:
-        return recommender_selectFilters(request, state)
-    elif state == UserState.DISPLAY_MODULES:
-        return recommender_displayModules(request, state, prev_state, request_id)
-    elif state == UserState.UPDATE_FILTERS:
-        return recommender_updateFilters(request, state, request_id)
-    elif state == UserState.SEE_FEEDBACK:
-        return recommender_seeFeedback(request, state, request_id)
-    elif state == UserState.THANKS:
-        return recommender_thanks(request, state)
-    pass
+    sessionInformation = False
+        
+    if request.session.get('current_state', None) is None and request.session.get('next_state', None) is None:
+        #print("First time in the system!")
+        request.session['first_time'] = False
+    else:
+        assert(request.session.get('current_state', None) is not None and request.session.get('next_state', None) is not None)
+        sessionInformation = True
+    
+    # my session keys:
+    # recommendation, modules, module_display_indices, module_remaining_indices, detailed_views, feedback, advancedForm, current_state, next_state
+    allKeysPresent = 'recommendation' in request.session and \
+                        'modules' in request.session and \
+                        'module_display_indices' in request.session and \
+                        'module_remaining_indices' in request.session and \
+                        'detailed_views' in request.session and \
+                        'feedback' in request.session and \
+                        'advancedForm' in request.session
+    keysPresent = 'recommendation' in request.session or \
+                    'modules' in request.session or \
+                    'module_display_indices' in request.session or \
+                    'module_remaining_indices' in request.session or \
+                    'detailed_views' in request.session or \
+                    'feedback' in request.session or \
+                    'advancedForm' in request.session
+    noKeysPresent = not keysPresent
+    someKeysPresent = keysPresent and not allKeysPresent
+    assert((allKeysPresent or noKeysPresent) and not someKeysPresent)
+    
+    if request.method == 'POST' and (('nextState' in request.POST and noKeysPresent) or (not sessionInformation)):
+        # session has expired
+        return False
+    return True
+
+def recommender_state_machine(request, state='0', prev_state=None, request_id=None):
+    if not session_is_valid(request):
+        # session has expired
+        # display message that the session has expired
+        # and go to select filters after 3s..
+        request.session['in_system'] = None
+        return render(request, 'modulo/recommender_session_expired.html')
+    
+    if request.method == 'POST' and 'nextState' in request.POST:
+        session_current_state = UserState.fromString(request.POST['nextState'])
+        session_previous_state = UserState(request.session.get('current_state', 0))
+        request.session['next_state'] = UserState.fromString(request.POST['nextState']).value
+        
+        if not validateSessionState(session_current_state, session_previous_state):
+            request.session['current_state'] = UserState.SELECT_FILTERS.value
+            request.session['next_state'] = UserState.SELECT_FILTERS.value
+            raise Http404("Invalid state transition..."+"\nCurrent state: "+session_current_state.toString()+"\nPrevious state: "+session_previous_state.toString()+"\n")
+        else:
+            response = HttpResponseRedirect(reverse('modulo:modulo-recommender'))
+        
+    else:
+        session_current_state = UserState(request.session.get('next_state', 0))
+        session_previous_state = UserState(request.session.get('current_state', 0))
+    
+        state = session_current_state
+        prev_state = session_previous_state
+        
+        if not validateSessionState(state, prev_state):
+            request.session['current_state'] = UserState.SELECT_FILTERS.value
+            request.session['next_state'] = UserState.SELECT_FILTERS.value
+            raise Http404("Invalid state transition in get method..."+"\nCurrent state: "+state.toString()+"\nPrevious state: "+prev_state.toString()+"\n")
+        
+        if state == UserState.SELECT_FILTERS:
+            response = recommender_selectFilters(request, state)
+        elif state == UserState.DISPLAY_MODULES:
+            response = recommender_displayModules(request, state)
+        elif state == UserState.UPDATE_FILTERS:
+            response = recommender_updateFilters(request, state)
+        elif state == UserState.SEE_FEEDBACK:
+            response = recommender_seeFeedback(request, state)
+        elif state == UserState.THANKS:
+            response = recommender_thanks(request, state)
+        
+    return response
 
 def recommender_selectFilters(request, state):
     # if this is a POST request we need to process the form data
@@ -146,18 +255,22 @@ def recommender_selectFilters(request, state):
         if form.is_valid():
             global activeRequestList, id_counter
             rec = processForm(form, Recommender(id=id_counter))
-            request_info = {'recommendation': json.dumps(rec, cls=HandleRecommender), 
-                            'modules': None, 
-                            'module_display_indices': None, 
-                            'module_remaining_indices': None, 
-                            'detailed_views': None, 
-                            'feedback': None,
-                            'advancedForm': isinstance(form, AdvancedRecommenderForm)}
-            activeRequestList.append(request_info)
-            id_counter += 1
+            request.session['recommendation'] = json.dumps(rec, cls=HandleRecommender)
+            request.session['modules'] = None
+            request.session['module_display_indices'] = None
+            request.session['module_remaining_indices'] = None
+            request.session['detailed_views'] = None
+            request.session['feedback'] = None
+            request.session['advancedForm'] = isinstance(form, AdvancedRecommenderForm)
+            request.session['current_state'] = state.value
+            request.session['next_state'] = UserState.DISPLAY_MODULES.value
+            request.session.set_expiry(3600) # expires after 1h = 3600s
             # redirect to a new URL:
-            return HttpResponseRedirect(reverse('modulo:modulo-recommender', args=[UserState.DISPLAY_MODULES.value, state.value, rec.id]))
+            return HttpResponseRedirect(reverse('modulo:modulo-recommender'))
+        
         else:
+            request.session['current_state'] = state.value
+            request.session['next_state'] = UserState.SELECT_FILTERS.value
             template_args = {'state': state.value, 'selectFilters': UserState.SELECT_FILTERS.value}
             if isinstance(form, AdvancedRecommenderForm):
                 template_args.update({'moduleForm': ModuleForm(), 'advancedForm': form, 'advanced': True})
@@ -169,40 +282,42 @@ def recommender_selectFilters(request, state):
     elif request.method == 'GET':
         moduleForm = ModuleForm()
         advancedForm = AdvancedRecommenderForm()
+        request.session['current_state'] = state.value
+        request.session['next_state'] = UserState.SELECT_FILTERS.value
         template_args = {'moduleForm': moduleForm, 'advancedForm': advancedForm, 'state': state.value, 'selectFilters': UserState.SELECT_FILTERS.value}
         return render(request, 'modulo/recommender_selectFilters.html', template_args)
     
     else:
         raise Http404("Unknown method for request %s" % request)
 
-def recommender_displayModules(request, state, prev_state, request_id):
-    request_info = getRequestFromActiveRequests(request_id)
-    if request_info is None:
-        global activeRequestList, id_counter
-        #print("id_counter: ", id_counter)
-        #print("request list: ", activeRequestList)
-        request_string = (request.META['SERVER_NAME']+":"+request.META['SERVER_PORT']+request.path)
-        return render(request, 'modulo/recommender_error.html', {'error_msg': "No recommendation available with id %d at request %s" % (request_id, request_string)})
-    else:
-        rec = Recommender.get_recommendation_from_json(request_info['recommendation'])
+def recommender_displayModules(request, state):
+    rec = Recommender.get_recommendation_from_json(request.session['recommendation'])
     
     if request.method == 'POST':
-        assert(request_info['modules'] is not None and request_info['module_display_indices'] is not None and request_info['detailed_views'] is not None)
-        modules = Module.get_modules_from_json(request_info['modules'])
-        display_indices = json.loads(request_info['module_display_indices'])
-        detailed_views = json.loads(request_info['detailed_views'])
-        modules_dict = json.loads(request_info['feedback'])
+        assert(request.session['modules'] is not None and request.session['module_display_indices'] is not None and request.session['detailed_views'] is not None)
+        modules = Module.get_modules_from_json(request.session['modules'])
+        display_indices = request.session['module_display_indices']
+        detailed_views = request.session['detailed_views']
+        modules_dict = request.session['feedback']
+        
+        if 'submitFeedback' in request.POST:
+            submitFeedback(rec, modules_dict)
+            request.session['current_state'] = state.value
+            request.session['next_state'] = UserState.THANKS.value
+            return HttpResponseRedirect(reverse('modulo:modulo-recommender'))
         
         valid, data, moduleButtonPressed = processDisplayModulesPostData(request.POST, [modules[i] for i in display_indices])
         if not valid:
+            request.session['current_state'] = state.value
+            request.session['next_state'] = UserState.DISPLAY_MODULES.value
             error_msg = 'You must either select the module "%s", mark it as interesting or mark it as a not-for-me module before submitting feedback for it!' % moduleButtonPressed
-            template_args = {'error_message': error_msg, 'id': request_id, 'modules': [modules[i] for i in display_indices], 'details': detailed_views, 'state': state.value, 'displayModules': UserState.DISPLAY_MODULES.value, 'updateFilters': UserState.UPDATE_FILTERS.value, 'seeFeedback': UserState.SEE_FEEDBACK.value}
+            template_args = {'error_message': error_msg, 'modules': [modules[i] for i in display_indices], 'details': detailed_views, 'state': state.value, 'displayModules': UserState.DISPLAY_MODULES.value, 'updateFilters': UserState.UPDATE_FILTERS.value, 'seeFeedback': UserState.SEE_FEEDBACK.value}
             if modules_dict['selectedModule'] is not None:
                 template_args.update({'selected_module': modules_dict['selectedModule']})
             return render(request, 'modulo/recommender_displayModules.html', template_args)
-            
+           
         if 'feedback' in data.keys():
-            remaining_indices = json.loads(request_info['module_remaining_indices'])
+            remaining_indices = request.session['module_remaining_indices']
             if data['feedback']['feedbackType'] == 'selectedModule':
                 if modules_dict['selectedModule'] is not None and modules_dict['selectedModule'] not in modules_dict['interestingModules']:
                     modules_dict['interestingModules'].append(modules_dict['selectedModule'])
@@ -211,17 +326,19 @@ def recommender_displayModules(request, state, prev_state, request_id):
                 modules_dict[data['feedback']['feedbackType']].append(data['feedback']['module_title'])
             if data['feedback']['module_title'] in detailed_views:
                    detailed_views.remove(data['feedback']['module_title'])
-                   request_info['detailed_views'] = json.dumps(detailed_views)
+                   request.session['detailed_views'] = detailed_views
             
             del display_indices[data['feedback']['module_display_Nr'] - 1] # starts at 1; is the index from [1 to #displayedModules]
             if remaining_indices:
                 display_indices.append(remaining_indices[0])
                 del remaining_indices[0]
             
-            request_info['module_display_indices'] = json.dumps(display_indices)
-            request_info['module_remaining_indices'] = json.dumps(remaining_indices)
-            request_info['feedback'] = json.dumps(modules_dict)        
-            return HttpResponseRedirect(reverse('modulo:modulo-recommender', args=[UserState.DISPLAY_MODULES.value, state.value, request_id]))
+            request.session['module_display_indices'] = display_indices
+            request.session['module_remaining_indices'] = remaining_indices
+            request.session['feedback'] = modules_dict
+            request.session['current_state'] = state.value
+            request.session['next_state'] = UserState.DISPLAY_MODULES.value
+            return HttpResponseRedirect(reverse('modulo:modulo-recommender'))
  
         if 'details' in data.keys():
             #get which module was clicked detail and mark it as seen and remove it from the list of notSeenModules
@@ -233,60 +350,58 @@ def recommender_displayModules(request, state, prev_state, request_id):
             elif data['details']['type'] == 'hide':
                 detailed_views.remove(data['details']['module_title'])
             
-            request_info['detailed_views'] = json.dumps(detailed_views)
-            request_info['feedback'] = json.dumps(modules_dict)
-            return HttpResponseRedirect(reverse('modulo:modulo-recommender', args=[UserState.DISPLAY_MODULES.value, state.value, request_id]))
+            request.session['detailed_views'] = detailed_views
+            request.session['feedback'] = modules_dict
+            request.session['current_state'] = state.value
+            request.session['next_state'] = UserState.DISPLAY_MODULES.value
+            return HttpResponseRedirect(reverse('modulo:modulo-recommender'))
     
     elif request.method == 'GET':
-        if request_info['modules'] is None:
-            assert(request_info['module_display_indices'] is None)
-            assert(request_info['module_remaining_indices'] is None)
-            assert(request_info['detailed_views'] is None)
-            assert(request_info['feedback'] is None)
+        if request.session['modules'] is None:
+            assert(request.session['modules'] is None)
+            assert(request.session['module_display_indices'] is None)
+            assert(request.session['module_remaining_indices'] is None)
+            assert(request.session['detailed_views'] is None)
+            assert(request.session['feedback'] is None)
             modules = rec.recommend()
             display_indices = list(range(min(5, len(modules))))
             remaining_indices = [] if len(modules) == len(display_indices) else list(range(len(modules)))[5:]
             detailed_views = []
             modules_dict = {'selectedModule': None, 'interestingModules': [], 'notForMeModules': [], 'seenModules': [], 'notSeenModules': [m.title for m in modules]}
             
-            request_info['recommendation'] = json.dumps(rec, cls=HandleRecommender) #update recommendation (categories are included in the filters...)
-            request_info['modules'] = json.dumps(modules, cls=HandleModule)
-            request_info['module_display_indices'] = json.dumps(display_indices)
-            request_info['module_remaining_indices'] = json.dumps(remaining_indices)
-            request_info['detailed_views'] = json.dumps(detailed_views)
-            request_info['feedback'] = json.dumps(modules_dict)
+            request.session['recommendation'] = json.dumps(rec, cls=HandleRecommender)
+            request.session['modules'] = json.dumps(modules, cls=HandleModule)
+            request.session['module_display_indices'] = display_indices
+            request.session['module_remaining_indices'] = remaining_indices
+            request.session['detailed_views'] = detailed_views
+            request.session['feedback'] = modules_dict
         
         else:
-            modules = Module.get_modules_from_json(request_info['modules'])
-            display_indices = json.loads(request_info['module_display_indices'])
-            remaining_indices = json.loads(request_info['module_remaining_indices'])
-            detailed_views = json.loads(request_info['detailed_views'])
-            modules_dict = json.loads(request_info['feedback'])
+            modules = Module.get_modules_from_json(request.session['modules'])
+            display_indices = request.session['module_display_indices']
+            remaining_indices = request.session['module_remaining_indices']
+            detailed_views = request.session['detailed_views']
+            modules_dict = request.session['feedback']
             
-        template_args = {'id': request_id, 'modules': [modules[i] for i in display_indices], 'details': detailed_views, 'state': state.value, 'displayModules': UserState.DISPLAY_MODULES.value, 'updateFilters': UserState.UPDATE_FILTERS.value, 'seeFeedback': UserState.SEE_FEEDBACK.value}
+        request.session['current_state'] = state.value
+        request.session['next_state'] = UserState.DISPLAY_MODULES.value
+        template_args = {'modules': [modules[i] for i in display_indices], 'details': detailed_views, 'state': state.value, 'displayModules': UserState.DISPLAY_MODULES.value, 'updateFilters': UserState.UPDATE_FILTERS.value, 'seeFeedback': UserState.SEE_FEEDBACK.value}
+        template_args.update({'feedback_provided': modules_dict['selectedModule'] != None or modules_dict['interestingModules'] != [] or modules_dict['notForMeModules'] != []})
         if modules_dict['selectedModule'] is not None:
             template_args.update({'selected_module': modules_dict['selectedModule']})
         if len(modules) == 0:
             error_msg = "There are no modules which match your current filters. Try updating them using the button below!"
             template_args.update({'error_message': error_msg})
         elif len(display_indices) == 0:
-            error_msg = "Thank you for providing feedback to every module. You can now review the provided feedback (SEE FEEDBACK) and from there submit it so that the system can learn to make better recommendations!"
+            error_msg = "Thank you for providing feedback to every module. You can now review the provided feedback (SEE FEEDBACK) or directly submit the feedback so that the system can learn to make better recommendations! You can also change your recommendation filters, but this will clear the provided feedback from your current recommendation."
             template_args.update({'error_message': error_msg})
         return render(request, 'modulo/recommender_displayModules.html', template_args)
     
     else:
         raise Http404("Unknown method for request %s" % request)
 
-def recommender_updateFilters(request, state, request_id):
-    request_info = getRequestFromActiveRequests(request_id)
-    if request_info is None:
-        global activeRequestList, id_counter
-        #print(id_counter)
-        #print(activeRequestList)
-        request_string = (request.META['SERVER_NAME']+":"+request.META['SERVER_PORT']+request.path)
-        return render(request, 'modulo/recommender_error.html', {'error_msg': "No recommendation available with id %d at request %s" % (request_id, request_string)})
-    else:
-        rec = Recommender.get_recommendation_from_json(request_info['recommendation'])
+def recommender_updateFilters(request, state):
+    rec = Recommender.get_recommendation_from_json(request.session['recommendation'])
     
     # if this is a POST request we need to process the form data
     if request.method == 'POST':
@@ -304,18 +419,23 @@ def recommender_updateFilters(request, state, request_id):
             oldFilters = copy.deepcopy(rec.filters)
             newRec = processForm(form, rec)
             if oldFilters != newRec.filters or set(oldInterests) != set(newRec.interests):
-                request_info['recommendation'] = json.dumps(newRec, cls=HandleRecommender)
-                request_info['modules'] = None
-                request_info['module_display_indices'] = None
-                request_info['module_remaining_indices'] = None
-                request_info['detailed_views'] = None
-                request_info['feedback'] = None
-                request_info['advancedForm'] = isinstance(form, AdvancedRecommenderForm)
+                request.session['recommendation'] = json.dumps(rec, cls=HandleRecommender)
+                request.session['modules'] = None
+                request.session['module_display_indices'] = None
+                request.session['module_remaining_indices'] = None
+                request.session['detailed_views'] = None
+                request.session['feedback'] = None
+                request.session['advancedForm'] = isinstance(form, AdvancedRecommenderForm)
+                
             # redirect to a new URL:
-            return HttpResponseRedirect(reverse('modulo:modulo-recommender', args=[UserState.DISPLAY_MODULES.value, state.value, request_id]))
+            request.session['current_state'] = state.value
+            request.session['next_state'] = UserState.DISPLAY_MODULES.value
+            return HttpResponseRedirect(reverse('modulo:modulo-recommender'))
         
         else:
-            template_args = {'id': request_id, 'state': state.value, 'updateFilters': UserState.UPDATE_FILTERS.value}
+            request.session['current_state'] = state.value
+            request.session['next_state'] = UserState.UPDATE_FILTERS.value
+            template_args = {'state': state.value, 'updateFilters': UserState.UPDATE_FILTERS.value}
             if isinstance(form, AdvancedRecommenderForm):
                 template_args.update({'moduleForm': ModuleForm(initial=ModuleForm.getInitialValuesFromRecommendation(rec)), 'advancedForm': form, 'advanced': True})
             elif isinstance(form, ModuleForm):
@@ -327,40 +447,41 @@ def recommender_updateFilters(request, state, request_id):
     elif request.method == 'GET':
         moduleForm = ModuleForm(initial=ModuleForm.getInitialValuesFromRecommendation(rec))
         advancedForm = AdvancedRecommenderForm(initial=AdvancedRecommenderForm.getInitialValuesFromRecommendation(rec))
-        template_args = {'moduleForm': moduleForm, 'advancedForm': advancedForm, 'advanced': request_info['advancedForm'], 'id': request_id, 'state': state.value, 'updateFilters': UserState.UPDATE_FILTERS.value}
+        request.session['current_state'] = state.value
+        request.session['next_state'] = UserState.UPDATE_FILTERS.value
+        template_args = {'moduleForm': moduleForm, 'advancedForm': advancedForm, 'advanced': request.session['advancedForm'], 'state': state.value, 'updateFilters': UserState.UPDATE_FILTERS.value}
         return render(request, 'modulo/recommender_updateFilters.html', template_args)
     
     else:
         raise Http404("Unknown method for request %s" % request)
 
-def recommender_seeFeedback(request, state, request_id):
-    request_info = getRequestFromActiveRequests(request_id)
-    if request_info is None:
-        request_string = (request.META['SERVER_NAME']+":"+request.META['SERVER_PORT']+request.path)
-        return render(request, 'modulo/recommender_error.html', {'error_msg': "No recommendation available with id %d at request %s" % (request_id, request_string)})
-    else:
-        rec = Recommender.get_recommendation_from_json(request_info['recommendation'])
+def recommender_seeFeedback(request, state):
+    rec = Recommender.get_recommendation_from_json(request.session['recommendation'])
     
-    assert(request_info['feedback'] is not None)
-    modules_dict = json.loads(request_info['feedback'])
+    assert(request.session['feedback'] is not None)
+    modules_dict = request.session['feedback']
     
     if not (modules_dict['selectedModule'] or modules_dict['interestingModules'] or modules_dict['notForMeModules']):
-        return render(request, 'modulo/recommender_error.html', {'error_msg': "You haven't selected any feedback to see.", 'next_action': [UserState.DISPLAY_MODULES.value], 'state': state.value, 'id': request_id})
+        request.session['current_state'] = state.value
+        #request.session['next_state'] = UserState.DISPLAY_MODULES.value
+        template_args = {'error_message': "You haven't selected any feedback to see.", 'next_action': [UserState.DISPLAY_MODULES.value], 'state': state.value}
+        return render(request, 'modulo/recommender_error.html', template_args)
     
     if request.method == 'POST':
         valid, data, moduleButtonPressed = processSeeFeedbackPostData(request.POST, modules_dict)
         if not valid:
-            detailed_views = json.loads(request_info['detailed_views'])
+            detailed_views = request.session['detailed_views']
+            request.session['current_state'] = state.value
+            request.session['next_state'] = UserState.SEE_FEEDBACK.value 
             error_msg = 'Select a choice for module %s if you want to update its feedback!' % moduleButtonPressed
-            return render(request, 'modulo/recommender_seeFeedback.html', {'error_message': error_msg, 'details': detailed_views, 'seeFeedback': UserState.SEE_FEEDBACK.value, 'displayModules': UserState.DISPLAY_MODULES.value, 'state': state.value, 'id': request_id, 'selected_module': modules_dict['selectedModule'], 'interesting_modules': modules_dict['interestingModules'], 'not_for_me_modules': modules_dict['notForMeModules'], 'seen_modules': modules_dict['seenModules'], 'not_seen_modules': modules_dict['notSeenModules']})
+            template_args = {'error_message': error_msg, 'details': detailed_views, 'seeFeedback': UserState.SEE_FEEDBACK.value, 'displayModules': UserState.DISPLAY_MODULES.value, 'state': state.value, 'selected_module': modules_dict['selectedModule'], 'interesting_modules': modules_dict['interestingModules'], 'not_for_me_modules': modules_dict['notForMeModules'], 'seen_modules': modules_dict['seenModules'], 'not_seen_modules': modules_dict['notSeenModules']}
+            return render(request, 'modulo/recommender_seeFeedback.html', template_args)
         
         if 'submitFeedback' in data.keys():
-            #incorporate feedback into the system
-            f = Feedback(recommendation=rec);
-            f.updateFeedback(**modules_dict)
-            f.setFeedback()
-            activeRequestList.remove(request_info)
-            return HttpResponseRedirect(reverse('modulo:modulo-recommender', args=[UserState.THANKS.value, state.value]))
+            submitFeedback(rec, modules_dict)
+            request.session['current_state'] = state.value
+            request.session['next_state'] = UserState.THANKS.value
+            return HttpResponseRedirect(reverse('modulo:modulo-recommender'))
         
         if 'feedback' in data.keys():
             #update the modules_dict
@@ -385,11 +506,13 @@ def recommender_seeFeedback(request, state, request_id):
             else:
                 raise Exception("Invalid feedback transition!")
                 
-            request_info['feedback'] = json.dumps(modules_dict)
-            return HttpResponseRedirect(reverse('modulo:modulo-recommender', args=[UserState.SEE_FEEDBACK.value, state.value, request_id]))
+            request.session['feedback'] = modules_dict
+            request.session['current_state'] = state.value
+            request.session['next_state'] = UserState.SEE_FEEDBACK.value
+            return HttpResponseRedirect(reverse('modulo:modulo-recommender'))
         
         if 'details' in data.keys():
-            detailed_views = json.loads(request_info['detailed_views'])
+            detailed_views = request.session['detailed_views']
             #show/hide details
             if data['details']['type'] == 'see':
                 detailed_views.append(data['details']['module_title'])
@@ -399,24 +522,33 @@ def recommender_seeFeedback(request, state, request_id):
             elif data['details']['type'] == 'hide':
                 detailed_views.remove(data['details']['module_title'])
             
-            request_info['detailed_views'] = json.dumps(detailed_views)
-            request_info['feedback'] = json.dumps(modules_dict)
-            return HttpResponseRedirect(reverse('modulo:modulo-recommender', args=[UserState.SEE_FEEDBACK.value, state.value, request_id]))
+            request.session['detailed_views'] = detailed_views
+            request.session['feedback'] = modules_dict
+            request.session['current_state'] = state.value
+            request.session['next_state'] = UserState.SEE_FEEDBACK.value
+            return HttpResponseRedirect(reverse('modulo:modulo-recommender'))
 
     elif request.method == 'GET':
-        detailed_views = json.loads(request_info['detailed_views'])
-        return render(request, 'modulo/recommender_seeFeedback.html', {'details': detailed_views, 'seeFeedback': UserState.SEE_FEEDBACK.value, 'displayModules': UserState.DISPLAY_MODULES.value, 'state': state.value, 'id': request_id, 'selected_module': modules_dict['selectedModule'], 'interesting_modules': modules_dict['interestingModules'], 'not_for_me_modules': modules_dict['notForMeModules'], 'seen_modules': modules_dict['seenModules'], 'not_seen_modules': modules_dict['notSeenModules']})
+        detailed_views = request.session['detailed_views']
+        request.session['current_state'] = state.value
+        request.session['next_state'] = UserState.SEE_FEEDBACK.value
+        template_args = {'details': detailed_views, 'seeFeedback': UserState.SEE_FEEDBACK.value, 'displayModules': UserState.DISPLAY_MODULES.value, 'state': state.value, 'selected_module': modules_dict['selectedModule'], 'interesting_modules': modules_dict['interestingModules'], 'not_for_me_modules': modules_dict['notForMeModules'], 'seen_modules': modules_dict['seenModules'], 'not_seen_modules': modules_dict['notSeenModules']}
+        return render(request, 'modulo/recommender_seeFeedback.html', template_args)
     
     else:
         raise Http404("Unknown method for request %s" % request)
     
 def recommender_thanks(request, state):
-    return render(request, 'modulo/recommender_thanks.html', {'state': state.value, 'selectFilters': UserState.SELECT_FILTERS.value})
+    #print("This session contains:")
+    #printSessionContent(request.session)
+    request.session.flush()
+    request.session['in_system'] = None
+    template_args = {'state': state.value, 'selectFilters': UserState.SELECT_FILTERS.value}
+    return render(request, 'modulo/recommender_thanks.html', template_args)
 
 def initialize():
-    global activeRequestList, allowed_transitions, id_counter
+    global activeRequestList, allowed_transitions, id_counter, requestListLock, max_inactive_time
     activeRequestList = []
-    id_counter = 0
     allowed_transitions = [
         # initial transition
         (None, UserState.SELECT_FILTERS),
@@ -434,6 +566,10 @@ def initialize():
         (UserState.DISPLAY_MODULES, UserState.SEE_FEEDBACK),
         (UserState.SEE_FEEDBACK, UserState.SEE_FEEDBACK),
         
-        (UserState.SEE_FEEDBACK, UserState.THANKS)
+        (UserState.SEE_FEEDBACK, UserState.THANKS),
+        (UserState.DISPLAY_MODULES, UserState.THANKS)
     ]
+    id_counter = 0
+    requestListLock = threading.Lock()
+    max_inactive_time = datetime.timedelta(weeks=0, days=0, hours=0, minutes=1, seconds=0, milliseconds=0, microseconds=0)
     print("views_recommender initialized")

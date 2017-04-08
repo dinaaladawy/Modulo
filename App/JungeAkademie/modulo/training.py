@@ -23,11 +23,13 @@ class Training():
         same = set(o for o in intersect_keys if d1[o] == d2[o])
         return added, removed, modified, same
                        
-    def __cleanup_json_object(line):
+    def __cleanup_json_object(line, lineNo):
+        #print("Cleaning up json_object ", lineNo)
         return Recommender.get_recommendation_from_json(line)
     
     def __validateRecommendation(rec, rec_no):
         """check that all categories, modules and interests are in the database"""
+        #print("Validating recommendation", rec_no)
         #check that categories in recommendation.filters['category'] are also in database
         # -> if not remove category from filter
         allCategories = [c.name for c in Category.objects.all()]
@@ -114,8 +116,12 @@ class Training():
         feedback.setFeedback(save_recommendation=False)
     
     def train(self):
-        with open(self.train_data_file, 'r') as old_file:
-            for line_no, line in enumerate(old_file):
-                rec = Training.__cleanup_json_object(line)
-                rec = Training.__validateRecommendation(rec, line_no)
-                Training.__train_instance(rec, line_no)
+        try:
+            with open(self.train_data_file, 'r') as old_file:
+                for line_no, line in enumerate(old_file):
+                    rec = Training.__cleanup_json_object(line, line_no)
+                    rec = Training.__validateRecommendation(rec, line_no)
+                    Training.__train_instance(rec, line_no)
+        except FileNotFoundError as e:
+            print('Could not find saved recommendations file...\nNot training the system...')
+            print(e.args)

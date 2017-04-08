@@ -1,0 +1,10 @@
+python 3.5
+tensorflow 1.10
+numpy (latest version)
+django 1.11
+django-autocomplete-light
+
+in dal_select2/static/autocomplete-light/select2.css add:
+	.select2-container .select2-search__field:not([placeholder='']) {
+		width: 100% !important;
+	}

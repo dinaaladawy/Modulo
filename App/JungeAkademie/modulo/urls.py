@@ -49,12 +49,13 @@ url(r'^recommendation/?$', views_recommendation.recommendation, name='modulo-rec
 url(r'^recommendation/(?P<recommendation_id>\d+)$', views_recommendation.recommendation, name='modulo-recommendation'),
 url(r'^thanks/?$', views_recommendation.recommender_thanks, name='modulo-recommender-thanks'),
 url(r'^recommendation/feedback/?$', views_recommendation.recommender_feedback, name='modulo-recommender-feedback'),
+
+url(r'^(?P<state>\d{1})$', views_recommendation.recommender_state_machine, name='modulo-recommender'),
+url(r'^(?P<state>\d{1})(?P<prev_state>\d{1})$', views_recommendation.recommender_state_machine, name='modulo-recommender'),
+url(r'^(?P<state>\d{1})(?P<prev_state>\d{1})(?P<request_id>\d*)$', views_recommendation.recommender_state_machine, name='modulo-recommender'),
 '''
 recommender_patterns = [
-    url(r'^$', views_recommendation.recommender_state_machine, name='modulo-recommender'),    
-    url(r'^(?P<state>\d{1})$', views_recommendation.recommender_state_machine, name='modulo-recommender'),
-    url(r'^(?P<state>\d{1})(?P<prev_state>\d{1})$', views_recommendation.recommender_state_machine, name='modulo-recommender'),
-    url(r'^(?P<state>\d{1})(?P<prev_state>\d{1})(?P<request_id>\d*)$', views_recommendation.recommender_state_machine, name='modulo-recommender'),
+    url(r'^$', views_recommendation.recommender_state_machine, name='modulo-recommender'),
 ]
 
 autocomplete_patterns = [
