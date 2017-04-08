@@ -14,7 +14,9 @@ class InterestAutocomplete(autocomplete.Select2QuerySetView):
         #print("In InterestAutocomplete:", self.__dict__)
         # Don't forget to filter out results depending on the visitor !
         if not self.request.user.is_authenticated():
-            return Interest.objects.none()
+            #print("User not authenticated..")
+            #return Interest.objects.none()
+            pass
 
         qs = Interest.objects.all()
 
@@ -27,7 +29,9 @@ class CourseFormatAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
         # Don't forget to filter out results depending on the visitor !
         if not self.request.user.is_authenticated():
-            return CourseFormat.objects.none()
+            #print("User not authenticated..")
+			#return CourseFormat.objects.none()
+            pass
 
         qs = CourseFormat.objects.all()
 
@@ -38,9 +42,12 @@ class CourseFormatAutocomplete(autocomplete.Select2QuerySetView):
     
 class ExamAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
+        #print("In ExamAutocomplete:", self.__dict__)
         # Don't forget to filter out results depending on the visitor !
         if not self.request.user.is_authenticated():
-            return Exam.objects.none()
+            #print("User not authenticated..")
+            #return Exam.objects.none()
+            pass
 
         qs = Exam.objects.all()
 
@@ -53,7 +60,9 @@ class LanguageAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
         # Don't forget to filter out results depending on the visitor !
         if not self.request.user.is_authenticated():
-            return Language.objects.none()
+            #print("User not authenticated..")
+			#return Language.objects.none()
+            pass
 
         qs = Language.objects.all()
 
@@ -64,9 +73,12 @@ class LanguageAutocomplete(autocomplete.Select2QuerySetView):
     
 class LocationAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
+        #print("In LocationAutocomplete:", self.__dict__)
         # Don't forget to filter out results depending on the visitor !
         if not self.request.user.is_authenticated():
-            return Location.objects.none()
+            #print("User not authenticated..")
+            #return Location.objects.none()
+            pass
 
         qs = Location.objects.all()
 
@@ -79,7 +91,9 @@ class PersonalityAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
         # Don't forget to filter out results depending on the visitor !
         if not self.request.user.is_authenticated():
-            return Personality.objects.none()
+            #print("User not authenticated..")
+			#return Personality.objects.none()
+            pass
 
         qs = Personality.objects.all()
 
