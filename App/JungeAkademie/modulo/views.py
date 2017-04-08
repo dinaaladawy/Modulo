@@ -6,8 +6,10 @@ from .views_documentation import initialize as doc_init
 from .views_recommendation import initialize as rec_init
 
 def index(request):
-    return render(request, 'modulo/index.html', {})
+    request.session['in_system'] = None
     #return HttpResponse("Hello, world. You're at the \"Modulo\" homepage.")
+    return render(request, 'modulo/index.html', {})
+    
 
 def initialize():
     doc_init()

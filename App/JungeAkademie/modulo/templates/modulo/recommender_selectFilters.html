@@ -5,20 +5,42 @@
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 
 {% autoescape off %}
-<form id="moduleForm" action="{% url 'modulo:modulo-recommender' selectFilters state %}" method="post">
+<form id="moduleForm" action="{% url 'modulo:modulo-recommender' %}" method="post">
 	{% csrf_token %}
-	{{ moduleForm.as_p }}
-	<input type="reset" value="Reset filters" /><input type="submit" name="moduleForm" value="Get course recommendation ->" />
+	{% comment %}{{ moduleForm.as_p | linebreaksbr }}{% endcomment %}
+	{% for field in moduleForm %}
+		<div class="fieldWrapper">
+			{{ field.errors }}
+			{{ field.label_tag }} {{ field }}
+			{% if field.help_text %}
+				<p class="help">{{ field.help_text | safe | linebreaksbr }}</p>
+			{% endif %}
+		</div>
+	{% endfor %}
+	<p>
+	<input type="reset" value="Reset filters" /><button type="button" id="selectAdvancedFilters" onclick="changeFormToDisplay()"></button>
+	</p>
+	<input type="submit" name="moduleForm" value="Get course recommendation ->" />
 </form>
 
-<form id="advancedForm" action="{% url 'modulo:modulo-recommender' selectFilters state %}" method="post">
+<form id="advancedForm" action="{% url 'modulo:modulo-recommender' %}" method="post">
 	{% csrf_token %}
-	{{ advancedForm.as_p }}
-	<input type="reset" value="Reset filters" /><input type="submit" name="advancedForm" value="Get course recommendation ->" />
+	{% comment %}{{ advancedForm.as_p | linebreaksbr }}{% endcomment %}
+	{% for field in advancedForm %}
+		<div class="fieldWrapper">
+			{{ field.errors }}
+			{{ field.label_tag }} {{ field }}
+			{% if field.help_text %}
+				<p class="help">{{ field.help_text | safe | linebreaksbr }}</p>
+			{% endif %}
+		</div>
+	{% endfor %}
+	<p>
+	<input type="reset" value="Reset filters" /><button type="button" id="selectNormalFilters" onclick="changeFormToDisplay()"></button>
+	</p>
+	<input type="submit" name="advancedForm" value="Get course recommendation ->" />
 </form>
 {% endautoescape %}
-
-<button id="filterSelect" onclick="changeFormToDisplay()"></button>
 
 <script type="text/javascript" src="{% static 'admin/js/vendor/jquery/jquery.js' %}"></script>
 {{ moduleForm.media }}
@@ -30,39 +52,19 @@ var displayAdvancedForm = true
 {% else %}
 var displayAdvancedForm = false
 {% endif %}
-//displayBothForms()
 changeFormToDisplay()
-
-function displayBothForms(){
-	document.getElementById("advancedForm").style.display="block"
-	document.getElementById("moduleForm").style.display="block"
-}
 
 function changeFormToDisplay(){
 	if (displayAdvancedForm){
 		document.getElementById("advancedForm").style.display="block"
 		document.getElementById("moduleForm").style.display="none"
-		document.getElementById("filterSelect").innerHTML = 'normal filters'
+		document.getElementById("selectNormalFilters").innerHTML = 'Normal filters'
 	}
 	else{
 		document.getElementById("moduleForm").style.display="block"
 		document.getElementById("advancedForm").style.display="none"
-		document.getElementById("filterSelect").innerHTML = 'advanced filters'
+		document.getElementById("selectAdvancedFilters").innerHTML = 'Advanced filters'
 	}
 	displayAdvancedForm = !displayAdvancedForm
 }
 </script>
-
-
-<!-- alternative way of displaying the form -->
-{% comment %}
-{% for field in form %}
-	<div class="fieldWrapper">
-		{{ field.errors }}
-		{{ field.label_tag }} {{ field }}
-		{% if field.help_text %}
-			<p class="help">{{ field.help_text | safe }}</p>
-		{% endif %}
-	</div>
-{% endfor %}
-{% endcomment %}

@@ -20,7 +20,7 @@ class HandleRecommender(json.JSONEncoder):
          return json.JSONEncoder.default(self, obj)
 
 class Recommender():
-    savedRecommendationsFile = '../recommendations.txt'
+    savedRecommendationsFile = 'modulo/recommendations/recommendations.txt'
     savedRecommendationsFileLock = None
     #name of all categories
     category_names = []

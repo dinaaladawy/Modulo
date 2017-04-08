@@ -1,45 +1,66 @@
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 
+<script>
+	var leftArrow = "<- "
+	var rightArrow = " ->"
+
+	function getButtonDisplayValue(nextState, currentState, buttonNr){
+		var buttonID = "button"+buttonNr
+		var nextStateID = "nextState"+buttonNr
+		var nextStateString = ""
+		var displayString = (currentState > nextState ? leftArrow : "")
+		switch (nextState) {
+			case 0:{
+				nextStateString += "selectFilters"
+				displayString += "Get new recommendation"
+				break;
+			}
+			case 1:{
+				nextStateString += "displayModules"
+				displayString += "Display modules"
+				break;
+			}
+			case 2:{
+				nextStateString += "updateFilters"
+				displayString += "Update filters"
+				break;
+			}
+			case 3:{
+				nextStateString += "seeFeedback"
+				displayString += "See feedback"
+				break;
+			}
+			case 4:{
+				nextStateString += "thanks"
+				displayString += "Thank you!"
+				break;
+			}
+		}
+		displayString += (currentState < nextState ? rightArrow : "")
+		document.getElementById(buttonID).value = displayString
+		document.getElementById(nextStateID).value = nextStateString
+		return displayString
+	}
+</script>
+
 {% if next_action %}
 	{% for a in next_action %}
-		<form action="{% url 'modulo:modulo-recommender' a state id %}" method="get"> 
+		<form action="{% url 'modulo:modulo-recommender' %}" method="post">
+			{% csrf_token %}
+			<input type="hidden" id="nextState{{ forloop.counter }}" name="nextState" value="">
 			<input id="button{{ forloop.counter }}" type="submit" value="" />
 		</form>
-		
 		<script>
-			var leftArrow = "<-"
-			var rightArrow = "->"
-			
-			function getButtonDisplayValue(nextState, currentState, buttonNr){
-				var buttonID = "button"+buttonNr
-				var displayString = (currentState > nextState ? leftArrow : "")
-				switch (nextState) {
-					case 0:{
-						displayString += "Get new recommendation"
-						break;
-					}
-					case 1:{
-						displayString += "Display modules"
-						break;
-					}
-					case 2:{
-						displayString += "Update filters"
-						break;
-					}
-					case 3:{
-						displayString += "See feedback"
-						break;
-					}
-				}
-				displayString += (currentState < nextState ? rightArrow : "")
-				document.getElementById(buttonID).value = displayString
-				return displayString
-			}
 			getButtonDisplayValue({{a}}, {{state}}, {{forloop.counter}})
 		</script>
 	{% endfor %}
 {% else %}
-	<form action="{% url 'modulo:modulo-recommender' %}" method="get"> 
-		<input type="submit" value="Get new recommendation" />
+	<form action="{% url 'modulo:modulo-recommender' %}" method="post">
+		{% csrf_token %}
+		<input type="hidden" id="nextState0" name="nextState" value="">
+		<input id="button0" type="submit" value="" />
 	</form>
+	<script>
+		getButtonDisplayValue(0, {{state}}, 0) //first 0 is the state 0 = SelectFilters and second 0 is the buttonNo
+	</script>
 {% endif %}

@@ -2,15 +2,13 @@
 
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 
-<p id="output"></p>
-
 {% autoescape off %}
 {% for module in modules %}
 	<strong><a href="{% url 'modulo:modulo-module-title' module.title %}"> {{ module.title }} </a><strong><br>
 	{% if module.title in details %}
 		{{ module.module_details }}<br>
 	{% endif %}
-	<form action="{% url 'modulo:modulo-recommender' displayModules state id %}" method="post" style="display: inline;">
+	<form action="{% url 'modulo:modulo-recommender' %}" method="post" style="display:inline">
 		{% csrf_token %}
 		<input type="radio" name="module{{ forloop.counter }}" value="selected" id="select{{ forloop.counter }}" onclick="selectModule({{ forloop.counter}} - 1)" />
 		<label for="select{{ forloop.counter }}">Select</label>
@@ -23,7 +21,7 @@
 		
 		<input type="submit" onclick="return submitForm({{ forloop.counter }} - 1, &quot;{{ module.title }}&quot;);" name="submit{{ forloop.counter }}" value="Submit feedback" />
 	</form>
-	<form action="{% url 'modulo:modulo-recommender' displayModules state id %}" method="post" style="display: inline;">
+	<form action="{% url 'modulo:modulo-recommender' %}" method="post" style="display:inline">
 		{% csrf_token %}
 		{% if module.title in details %}
 			<input type="submit" name="details{{ forloop.counter }}" value="Hide details" />
@@ -34,26 +32,27 @@
 	<br><br>
 {% endfor %}
 <br>
-<form action="{% url 'modulo:modulo-recommender' updateFilters state id %}" method="get" style="display: inline;">
+<form action="{% url 'modulo:modulo-recommender' %}" method="post" style="display:inline">
+	{% csrf_token %}
+	<input type="hidden" name="nextState" value="updateFilters">
 	<input type="submit" value="<- Update filters" />
 </form>
-<form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" method="get" style="display: inline;">
+<form action="{% url 'modulo:modulo-recommender' %}" method="post" style="display:inline">
+	{% csrf_token %}
+	<input type="hidden" name="nextState" value="seeFeedback">
 	<input type="submit" value="See feedback ->" />
 </form>
 {% if feedback_provided %}
-<form action="{% url 'modulo:modulo-recommender' displayModules state id %}" method="post" style="display: inline;">
+<form action="{% url 'modulo:modulo-recommender' %}" method="post" style="display:inline">
 	{% csrf_token %}
 	<input type="submit" name="submitFeedback" value="Submit feedback -->" />
 </form>
 {% endif %}
-<!-- <a href="{% url 'modulo:modulo-recommender' updateFilters state id %}" class="button">Update filters <-</a> -->
-<!-- <a href="{% url 'modulo:modulo-recommender' seeFeedback state id %}" class="button">See feedback -></a> -->
 
 <script>
 var nrSelectedModule = 0
 var modulesSelected = []
 
-//document.getElementById("output").innerHTML = confirmTxt("newTestModule")
 function confirmTxt(newSelectedModule){
 	return "You can only have one selected module.\nBy proceeding you will override the selected module \""+"{{ selected_module }}"+"\" with \""+newSelectedModule+"\".\nProceed?"
 }
