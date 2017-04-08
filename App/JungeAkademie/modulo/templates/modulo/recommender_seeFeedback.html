@@ -10,13 +10,13 @@
 	{% if selected_module in details %}
 		More details on module {{ selected_module }} coming soon to a web browser near you...<br>
 	{% endif %}
-	<form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" style="display: inline;" method="post">
+	<form action="{% url 'modulo:modulo-recommender' %}" style="display:inline" method="post">
 		{% csrf_token %}
 		<input type="radio" name="selected_module_{{ selected_module }}" id="selected_module_feedback" value="interesting" />
 		<label for="selected_module_feedback">Deselect module</label><br>
 		<input type="submit" onclick="return submitForm('selected', 0, &quot;{{ selected_module }}&quot;);" name="submit{{ selected_module }}" value="Update feedback" />
 	</form>
-	<form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" style="display: inline;" method="post">
+	<form action="{% url 'modulo:modulo-recommender' %}" style="display:inline" method="post">
 		{% csrf_token %}
 		{% if selected_module in details %}
 			<input type="submit" name="details{{ selected_module }}" value="Hide details"><br>
@@ -34,7 +34,7 @@
 		{% if m in details %}
 			More details on module {{ m }} coming soon to a web browser near you...<br>
 		{% endif %}
-		<form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" style="display: inline;" method="post">
+		<form action="{% url 'modulo:modulo-recommender' %}" style="display:inline" method="post">
 			{% csrf_token %}
 			<input type="radio" name="interesting_module_{{ m }}" id="interesting_module_feedback_select_{{ m }}" value="selected" onclick="selectModule('interesting', {{ forloop.counter }} - 1)" />
 			<label for="interesting_module_feedback_select_{{ m }}">Select module</label>
@@ -45,7 +45,7 @@
 			<input type="submit" onclick="return submitForm('interesting', {{ forloop.counter }} - 1, &quot;{{ m }}&quot;);" name="submit{{ m }}" value="Update feedback" />
 			
 		</form>
-		<form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" style="display: inline;" method="post">
+		<form action="{% url 'modulo:modulo-recommender' %}" style="display:inline" method="post">
 			{% csrf_token %}
 			{% if m in details %}
 				<input type="submit" name="details{{ m }}" value="Hide details"><br>
@@ -64,7 +64,7 @@
 		{% if m in details %}
 			More details on module {{ m }} coming soon to a web browser near you...<br>
 		{% endif %}
-		<form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" style="display: inline;" method="post">
+		<form action="{% url 'modulo:modulo-recommender' %}" style="display:inline" method="post">
 			{% csrf_token %}
 			<input type="radio" name="not_for_me_module_{{ m }}" id="not_for_me_module_feedback_select_{{ m }}" value="selected" onclick="selectModule('notForMe', {{ forloop.counter }} - 1)" />
 			<label for="not_for_me_module_feedback_select_{{ m }}">Select module</label>
@@ -72,7 +72,7 @@
 			<label for="not_for_me_module_feedback_interesting_{{ m }}">Interesting module</label><br>
 			<input type="submit" onclick="return submitForm('notForMe', {{ forloop.counter }} - 1, &quot;{{ m }}&quot;);" name="submit{{ m }}" value="Update feedback" />
 		</form>
-		<form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" style="display: inline;" method="post">
+		<form action="{% url 'modulo:modulo-recommender' %}" style="display:inline" method="post">
 			{% csrf_token %}
 			{% if m in details %}
 				<input type="submit" name="details{{ m }}" value="Hide details"><br>
@@ -100,12 +100,14 @@
 	<br>
 {% endif %}
 
-<form action="{% url 'modulo:modulo-recommender' displayModules state id %}" method="get">
-	<input type="submit" value="View recommendation" />
-</form>
-<form action="{% url 'modulo:modulo-recommender' seeFeedback state id %}" method="post">
+<form action="{% url 'modulo:modulo-recommender' %}" method="post" style="display:inline">
 	{% csrf_token %}
-	<input type="submit" name="submitFeedback" value="Submit feedback" />
+	<input type="hidden" name="nextState" value="displayModules">
+	<input type="submit" value="<- View recommendation" />
+</form>
+<form action="{% url 'modulo:modulo-recommender' %}" method="post" style="display:inline">
+	{% csrf_token %}
+	<input type="submit" name="submitFeedback" value="Submit feedback ->" />
 </form>
 
 <script>

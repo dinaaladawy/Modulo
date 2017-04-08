@@ -107,10 +107,8 @@ class Module(models.Model):
     title =         models.CharField(max_length=100, default='')
     time =          models.TimeField(blank=True, null=True, default='00:00') #models.TimeField(default=None)
     credits =       models.IntegerField(blank=True, null=True, default=0)
-    #place =         models.IntegerField(choices=LOCATIONS, default=Location.NOT_SPECIFIED)
-    location =      models.ForeignKey(Location, default=None, blank=True, null=True, on_delete=models.CASCADE)
-    #exam =          models.IntegerField(choices=EXAM_TYPES, default=Exam.NOT_SPECIFIED)
-    exam =          models.ForeignKey(Exam, default=None, blank=True, null=True, on_delete=models.CASCADE)
+    location =      models.ForeignKey(Location, blank=True, null=True, default=None, on_delete=models.CASCADE)
+    exam =          models.ForeignKey(Exam, blank=True, null=True, default=None, on_delete=models.CASCADE)
     categories =    models.ManyToManyField(Category)
     
     selections =    models.BigIntegerField(default=0)
@@ -125,10 +123,8 @@ class Module(models.Model):
     sws =               models.FloatField(default=0.0)
     minParticipants =   models.IntegerField(default=0)
     maxParticipants =   models.IntegerField(default=sys.maxsize)
-    #type =              models.IntegerField(choices=COURSE_TYPES, default=CourseFormat.NOT_SPECIFIED)
-    type =              models.ForeignKey(CourseFormat, default=None, blank=True, null=True, on_delete=models.CASCADE)
-    #language =          models.CharField(max_length=2, choices=LANGUAGES, default=Language.NOT_SPECIFIED)
-    language =          models.ForeignKey(Language, default=None, blank=True, null=True, on_delete=models.CASCADE)
+    type =              models.ForeignKey(CourseFormat, blank=True, null=True, default=None, on_delete=models.CASCADE)
+    language =          models.ForeignKey(Language, blank=True, null=True, default=None, on_delete=models.CASCADE)
     
     def __str__(self):
         return self.title
