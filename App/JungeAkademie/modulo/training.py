@@ -87,7 +87,7 @@ class Training():
     @staticmethod
     def __train_instance(rec, rec_no):
         print("Training recommendation", rec_no)
-        modules = rec.recommend()
+        modules, = rec.recommend()
         modules = [m.title for m in modules]
         modules_in_recommendation = [False for m in modules]
 

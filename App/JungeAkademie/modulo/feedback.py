@@ -39,7 +39,7 @@ class Feedback():
             self.modules_dict['not_seen_modules'] = not_seen_modules
 
     def set_feedback(self, save_recommendation=True):
-        self.recommendation.incorporateFeedback(self.modules_dict, save_recommendation)
+        self.recommendation.incorporate_feedback(self.modules_dict, save_recommendation)
         if self.modules_dict['selected_module'] is not None:
             m = Module.objects.get(title=self.modules_dict['selected_module'])
             m.selected = F('selected') + 1

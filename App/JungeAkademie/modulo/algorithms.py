@@ -43,16 +43,16 @@ class LearningAlgorithm(ABC):
 
     @staticmethod
     @abstractstaticmethod
-    def update_weights(updateType, to_delete_index=None):
+    def update_weights(update_type, to_delete_index=None):
         pass
 
     @abstractmethod
-    def run_algorithm(self, train=False, eval=False, loss=False):
+    def run_algorithm(self, train=False, evaluate=False, loss=False):
         pass
 
     @staticmethod
     @abstractstaticmethod
-    def initialize():
+    def initialize(**kwargs):
         pass
 
 
@@ -68,6 +68,7 @@ class LinearClassifier(LearningAlgorithm):
     y = tf.placeholder(tf.float32)  # label vector
 
     def __init__(self, rec):
+        super(LinearClassifier, self).__init__()
         self.rec = rec
 
     def __get_input(self, all_interests):
@@ -125,25 +126,25 @@ class LinearClassifier(LearningAlgorithm):
         return value_W, value_b
 
     @staticmethod
-    def update_weights(updateType, to_delete_index=None):
+    def update_weights(update_type, to_delete_index=None):
         value_w, value_b = LinearClassifier.get_weights()
         op = []
 
-        if updateType == UpdateType.DELETE_CATEGORY:
+        if update_type == UpdateType.DELETE_CATEGORY:
             value_w = np.delete(value_w, to_delete_index, axis=1)
             value_b = np.delete(value_b, to_delete_index, axis=0)
             op = [tf.assign(LinearClassifier.w, value_w, validate_shape=False),
                   tf.assign(LinearClassifier.b, value_b, validate_shape=False)]
-        elif updateType == UpdateType.DELETE_INTEREST:
+        elif update_type == UpdateType.DELETE_INTEREST:
             value_w = np.delete(value_w, to_delete_index, axis=0)
             op = tf.assign(LinearClassifier.w, value_w, validate_shape=False)
-        elif updateType == UpdateType.INSERT_CATEGORY:
+        elif update_type == UpdateType.INSERT_CATEGORY:
             value_w = np.append(value_w, np.random.normal(size=[value_w.shape[0], 1]),
                                 axis=1)  # add column to weight matrix
             value_b = np.append(value_b, np.random.normal(size=[1]), axis=0)  # add row to bias
             op = [tf.assign(LinearClassifier.w, value_w, validate_shape=False),
                   tf.assign(LinearClassifier.b, value_b, validate_shape=False)]
-        elif updateType == UpdateType.INSERT_INTEREST:
+        elif update_type == UpdateType.INSERT_INTEREST:
             value_w = np.append(value_w, np.random.normal(size=[1, value_w.shape[1]]),
                                 axis=0)  # add row to weight matrix
             op = tf.assign(LinearClassifier.w, value_w, validate_shape=False)
@@ -153,9 +154,11 @@ class LinearClassifier(LearningAlgorithm):
         LinearClassifier.session.run(op)  # reassign variables
 
     @staticmethod
-    def initialize(num_interests, num_categories):
+    def initialize(**kwargs):
+        num_interests = kwargs.get('num_interests', None)
+        num_categories = kwargs.get('num_categories', None)
         # normalize the data: column sum must be 1!!! why??? -> linear classifier...
-        # w = np.random.normal(loc=0.0, scale=1.0, size=(nrCateg, nrInter))
+        # w = np.random.normal(loc=0.0, scale=1.0, size=(nr_categories, nr_interests))
         # w = normalize_probs_col(w)
 
         LinearClassifier.w = tf.Variable(tf.random_normal([num_interests, num_categories], mean=0, stddev=1),
@@ -164,7 +167,7 @@ class LinearClassifier(LearningAlgorithm):
                                          validate_shape=False)  # biases
         # print("Recommender.w = ", Recommender.w, sep='')
         # print("Recommender.b = ", Recommender.b, sep='')
-        # FIXME: problem with multithreadding; just one global session???
+        # FIXME: problem with multi-threading; just one global session???
         config = tf.ConfigProto()
         config.gpu_options.allow_growth = True
         LinearClassifier.session = tf.Session(config=config)

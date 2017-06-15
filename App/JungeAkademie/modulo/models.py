@@ -158,7 +158,10 @@ class Module(models.Model):
         return not self == other
 
     def module_details(self):
-        return "More details on module %s coming soon to a web browser near you..." % self.title
+        details = self.description if self.description \
+            else ("There is no description in the database for the module \"{0}\". " +
+                  "For more details please contact the organizers.").format(self.title)
+        return details
 
     def get_json_from_modules(module):
         json_object = None
