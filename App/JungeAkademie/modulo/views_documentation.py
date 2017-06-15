@@ -32,10 +32,11 @@ def module(request, module_title):
             attr_val = getattr(module, attr, None)
 
         if not attr_val in [None, "", []]:
-            print(type(attr_val), ": ", attr_val, sep="")
+            # print(type(attr_val), ": ", attr_val, sep="")
             documentation_attributes.append(('Module '+attr, attr_val))
         else:
-            print("There is no \"" + attr + "\" entry in the database for module " + module.title)
+            # print("There is no \"" + attr + "\" entry in the database for module " + module.title)
+            pass
 
     return render(request, 'modulo/documentation_object.html',
                   {'class': 'Module', 'documentation_object': module,

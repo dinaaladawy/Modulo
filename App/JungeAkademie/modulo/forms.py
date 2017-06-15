@@ -19,6 +19,8 @@ class AdvancedRecommenderForm(forms.Form):
         interestChoices = []
         examChoices = []
         locationChoices = []
+    
+    interests = forms.TypedMultipleChoiceField(required=True, label='Interests', choices=interestChoices, widget=autocomplete.Select2Multiple(url='modulo:interest-autocomplete', attrs={'data-placeholder': 'Select your interests...'}), help_text='This field is required.\nYou can type your interests to get module recommendations which have contents according to your interests.')    
     #timeMin = forms.TimeField(initial='00:00', input_formats=['%H:%M'], required=False, label='Min Start Time', widget=forms.TimeInput(format='%H:%M', attrs={'placeholder': 'Enter min. starting time'}), error_messages={'invalid': 'Enter a valid time using a "HH:MM" format'}, help_text='This is the lower bound of the starting time interval of your module recommendation.\nPlease use the format "HH:MM".')
     #timeMax = forms.TimeField(initial='23:59', input_formats=['%H:%M'], required=False, label='Max Start Time', widget=forms.TimeInput(format='%H:%M', attrs={'placeholder': 'Enter max. starting time'}), error_messages={'invalid': 'Enter a valid time using a "HH:MM" format'}, help_text='This is the upper bound of the starting time interval of your module recommendation.\nPlease use the format "HH:MM".')
     timeMin = forms.TimeField(initial=None, input_formats=['%H:%M'], required=False, label='Min Start Time', widget=forms.TimeInput(format='%H:%M', attrs={'placeholder': 'Enter min. starting time'}), error_messages={'invalid': 'Enter a valid time using a "HH:MM" format'}, help_text='This is the lower bound of the starting time interval of your module recommendation.\nPlease use the format "HH:MM".')
@@ -29,7 +31,10 @@ class AdvancedRecommenderForm(forms.Form):
     creditsMax = forms.FloatField(initial=None, min_value=0.0, label='Max Credits', required=False, widget=forms.NumberInput(attrs={'placeholder': 'Enter max. credits'}), help_text='This is the desired highest amount of credits of your module recommendation.')
     exam = forms.TypedMultipleChoiceField(choices=examChoices, label='Exam Types', required=False, widget=autocomplete.Select2Multiple(url='modulo:exam-autocomplete', attrs={'data-placeholder': 'Select exam types...'}), help_text='These are the available exam types.\nYou can select multiple exam types.')
     location = forms.TypedMultipleChoiceField(choices=locationChoices, label='Locations', required=False, widget=autocomplete.Select2Multiple(url='modulo:location-autocomplete', attrs={'data-placeholder': 'Select locations...'}), help_text='These are the available locations.\nYou can select multiple locations.')
-    interests = forms.TypedMultipleChoiceField(required=True, label='Interests', choices=interestChoices, widget=autocomplete.Select2Multiple(url='modulo:interest-autocomplete', attrs={'data-placeholder': 'Select your interests...'}), help_text='You can type your interests to get module recommendations which have contents according to your interests.')    
+    
+    class Meta:
+        model = Module
+        fields = ['interests', 'timeMin', 'timeMax', 'creditsMin', 'creditsMax', 'exam', 'location']#, 'type', 'language']
     
     def processInterests(self):
         interests = self.cleaned_data['interests']
@@ -131,15 +136,22 @@ class ModuleForm(forms.ModelForm):
         #qs = Interest.objects.none()
         choices = []
     #interests = forms.ModelChoiceField(required=False, queryset=qs, widget=autocomplete.ModelSelect2Multiple(url='modulo:interest-autocomplete'))
-    interests = forms.TypedMultipleChoiceField(required=True, choices=choices, widget=autocomplete.Select2Multiple(url='modulo:interest-autocomplete', attrs={'data-placeholder': 'Select your interests...'}), help_text='You can type your interests to get module recommendations which have contents according to your interests.')
     #time = forms.TimeField(initial='00:00', input_formats=['%H:%M'], label='Start time', required=False, widget=forms.TimeInput(format='%H:%M'), error_messages={'invalid': 'Enter a valid time using a "HH:MM" format'}, help_text='This desired starting time of your module recommendation.\nFor selecting a starting time interval please use the advanced filter form.\nPlease use the format "HH:MM".')
-    time = forms.TimeField(initial=None, input_formats=['%H:%M'], label='Start time', required=False, widget=forms.TimeInput(format='%H:%M', attrs={'placeholder': 'Enter starting time'}), error_messages={'invalid': 'Enter a valid time using a "HH:MM" format'}, help_text='This desired starting time of your module recommendation.\nFor selecting a starting time interval please use the advanced filter form.\nPlease use the format "HH:MM".')
     #credits = forms.FloatField(initial=0, min_value=0.0, required=False, help_text='This is the desired amount of credits of your module recommendation.\nFor selecting a credit interval use the advanced filter form.')
-    credits = forms.FloatField(initial=None, min_value=0.0, required=False, widget=forms.NumberInput(attrs={'placeholder': 'Enter number of credits'}), help_text='This is the desired amount of credits of your module recommendation.\nFor selecting a credit interval use the advanced filter form.')
+    interests_help_text = "This field is required.\nYou can type your interests to get module recommendations which have contents according to your interests."
+    time_help_text = "This is the desired starting time of your module recommendation.\nPlease enter the exact desired starting time of the course.\nFor selecting a starting time interval please use the advanced filter form.\nPlease use the format \"HH:MM\"."
+    credit_help_text = "This is the exact desired amount of credits of your module recommendation.\nFor selecting a credit interval use the advanced filter form."
+    
+    interests = forms.TypedMultipleChoiceField(required=True, choices=choices, widget=autocomplete.Select2Multiple(url='modulo:interest-autocomplete', attrs={'data-placeholder': 'Select your interests...'}), help_text=interests_help_text)
+    time = forms.TimeField(initial=None, input_formats=['%H:%M'], label='Start time', required=False, widget=forms.TimeInput(format='%H:%M', attrs={'placeholder': 'Enter starting time'}), error_messages={'invalid': 'Enter a valid time using a "HH:MM" format'}, help_text=time_help_text)
+    credits = forms.FloatField(initial=None, min_value=0.0, required=False, widget=forms.NumberInput(attrs={'placeholder': 'Enter number of credits'}), help_text=credit_help_text)
     
     class Meta:
+        location_help_text = "These are the locations where the lectures and courses are held.\nYou can select one location. For selecting multiple locations use the advanced filter form."
+        exam_help_text = "These are the available exam types.\nYou can select one type. For selecting multiple types use the advanced filter form."
+        
         model = Module
-        fields = ['time', 'credits', 'exam', 'location']#, 'type', 'language']
+        fields = ['interests', 'time', 'credits', 'exam', 'location']#, 'type', 'language']
         widgets = {
             'exam': autocomplete.ListSelect2(url='modulo:exam-autocomplete', attrs={'data-placeholder': 'Select exam type...'}),
             'location': autocomplete.ListSelect2(url='modulo:location-autocomplete', attrs={'data-placeholder': 'Select location...'}),
@@ -148,8 +160,8 @@ class ModuleForm(forms.ModelForm):
             'exam': 'Exam type',
         }
         help_texts = {
-            'exam': 'These are the available exam types.\nYou can select one type. For selecting multiple types use the advanced filter form.',
-            'location': 'These are the available locations.\nYou can select one location. For selecting multiple locations use the advanced filter form.'
+            'exam': exam_help_text,
+            'location': location_help_text
         }
         
     def processInterests(self):
