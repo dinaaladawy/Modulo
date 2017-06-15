@@ -23,9 +23,11 @@
         {% endif %}
         <form action="{% url 'modulo:modulo-recommender' %}" method="post" style="display:inline">
             {% csrf_token %}
+            {% comment %}
             <input type="radio" name="module{{ forloop.counter }}" value="selected" id="select{{ forloop.counter }}"
                    onclick="selectModule({{ forloop.counter }} - 1)"/>
             <label for="select{{ forloop.counter }}">Select</label>
+            {% endcomment %}
 
             <input type="radio" name="module{{ forloop.counter }}" value="interesting"
                    id="interesting{{ forloop.counter }}" onclick="unselectModule({{ forloop.counter }} - 1)"/>

@@ -40,10 +40,11 @@
             {% endif %}
             <form action="{% url 'modulo:modulo-recommender' %}" style="display:inline" method="post">
                 {% csrf_token %}
+                {% comment %}
                 <input type="radio" name="interesting_module_{{ m }}" id="interesting_module_feedback_select_{{ m }}"
                        value="selected" onclick="selectModule('interesting', {{ forloop.counter }} - 1)"/>
                 <label for="interesting_module_feedback_select_{{ m }}">Select module</label>
-
+                {% endcomment %}
                 <input type="radio" name="interesting_module_{{ m }}" id="interesting_module_feedback_not_for_me{{ m }}"
                        value="not_for_me" onclick="unselectModule('interesting', {{ forloop.counter }} - 1)"/>
                 <label for="interesting_module_feedback_not_for_me{{ m }}">Not-for-me module</label><br>
@@ -75,12 +76,15 @@
             {% endif %}
             <form action="{% url 'modulo:modulo-recommender' %}" style="display:inline" method="post">
                 {% csrf_token %}
+                {% comment %}
                 <input type="radio" name="not_for_me_module_{{ m }}" id="not_for_me_module_feedback_select_{{ m }}"
                        value="selected" onclick="selectModule('notForMe', {{ forloop.counter }} - 1)"/>
                 <label for="not_for_me_module_feedback_select_{{ m }}">Select module</label>
+                {% endcomment %}
                 <input type="radio" name="not_for_me_module_{{ m }}" id="not_for_me_module_feedback_interesting_{{ m }}"
                        value="interesting" onclick="unselectModule('notForMe', {{ forloop.counter }} - 1)"/>
                 <label for="not_for_me_module_feedback_interesting_{{ m }}">Interesting module</label><br>
+
                 <input type="submit"
                        onclick="return submitForm('notForMe', {{ forloop.counter }} - 1, &quot;{{ m }}&quot;);"
                        name="submit{{ m }}" value="Update feedback"/>
@@ -97,6 +101,7 @@
         <br>
     {% endif %}
 
+    {% comment %}
     {% if seen_modules %}
         <strong>Seen modules:</strong><br>
         {% for m in seen_modules %}
@@ -112,6 +117,7 @@
         {% endfor %}
         <br>
     {% endif %}
+    {% endcomment %}
 
     <form action="{% url 'modulo:modulo-recommender' %}" method="post" style="display:inline">
         {% csrf_token %}

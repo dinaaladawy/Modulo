@@ -216,7 +216,7 @@ def session_is_valid(request):
     return True
 
 
-def recommender_state_machine(request, state='0', prev_state=None, request_id=None):
+def recommender_state_machine(request):
     if not session_is_valid(request):
         # session has expired
         # display message that the session has expired
@@ -395,7 +395,7 @@ def recommender_display_modules(request, state):
                 detailed_views.remove(data['details']['module_title'])
                 module_details.pop(data['details']['module_title'])
 
-            print(module_details)
+            # print(module_details)
             request.session['detailed_views'] = detailed_views
             request.session['module_details'] = module_details
             request.session['feedback'] = modules_dict
@@ -436,7 +436,7 @@ def recommender_display_modules(request, state):
             module_details = request.session['module_details']
             modules_dict = request.session['feedback']
 
-        print(module_details)
+        # print(module_details)
         request.session['current_state'] = state.value
         request.session['next_state'] = UserState.DISPLAY_MODULES.value
         template_args = {'modules': [modules[i] for i in display_indices], 'details': detailed_views,
@@ -604,7 +604,7 @@ def recommender_see_feedback(request, state):
             detailed_views = request.session['detailed_views']
             module_details = request.session['module_details']
 
-            print(module_details)
+            # print(module_details)
             # show/hide details
             if data['details']['type'] == 'see':
                 detailed_views.append(data['details']['module_title'])
@@ -616,7 +616,7 @@ def recommender_see_feedback(request, state):
             elif data['details']['type'] == 'hide':
                 detailed_views.remove(data['details']['module_title'])
                 module_details.pop(data['details']['module_title'])
-            print(module_details)
+            # print(module_details)
 
             request.session['detailed_views'] = detailed_views
             request.session['module_details'] = module_details
@@ -628,7 +628,7 @@ def recommender_see_feedback(request, state):
     elif request.method == 'GET':
         detailed_views = request.session['detailed_views']
         module_details = request.session['module_details']
-        print(module_details)
+        # print(module_details)
         request.session['current_state'] = state.value
         request.session['next_state'] = UserState.SEE_FEEDBACK.value
         template_args = {'details': detailed_views, 'module_details': module_details,
