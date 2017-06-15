@@ -8,13 +8,18 @@
 {% endblock %}
 
 {% block content %}
-	{% for attr in documentation_attributes %}
-		<p> 
-			;
-		</p>
-	{% endfor %}
-	
+    {% for attr_name, attr in documentation_attributes %}
+        {% if attr >= 10e17 %}
+            <!-- 9223372036854775807 -->
+            <p> <b> {{ attr_name }} </b>: no limit </p>
+        {% else %}
+            <p> <b> {{ attr_name }} </b>: {{ attr }} </p>
+        {% endif %}
+    {% empty %}
+        <h2>Sorry, there is no documentation to show...</h2>
+    {% endfor %}
+
 	{% if request.META.HTTP_REFERER %}
-	<a href="{{ request.META.HTTP_REFERER }}">Back</a>
+	    <a href="{{ request.META.HTTP_REFERER }}">Back</a>
 	{% endif %}
 {% endblock %}
