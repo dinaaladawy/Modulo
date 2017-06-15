@@ -6,7 +6,7 @@ class ModuloConfig(AppConfig):
     verbose_name = 'TUM:JungeAkademie - Modulo'
     
     def ready(self):
-        #start-up / initialization code here!!!
+        # start-up / initialization code here!!!
         from .recommender import Recommender
         from .views import initialize as views_initialize
         Recommender.initialize()
