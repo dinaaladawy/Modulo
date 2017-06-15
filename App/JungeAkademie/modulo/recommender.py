@@ -60,7 +60,7 @@ class Recommender():
     # apply learning algorithm to map the selected interests to categories
     # returns sorted list of category_names according to the user interests
     def __getCategoriesFromInterests(self):
-        res = self.algorithm.run_algorithm(eval=True)
+        res = self.algorithm.run_algorithm(evaluate=True)
         probs = res['eval'][0]
         sortedIndices = sorted(range(len(Recommender.category_names)), key=lambda k: probs[k], reverse=True)
         categories_sorted = [Recommender.category_names[i] for i in sortedIndices]
