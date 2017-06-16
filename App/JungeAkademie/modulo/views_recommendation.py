@@ -342,8 +342,12 @@ def recommender_display_modules(request, state):
         if not valid:
             request.session['current_state'] = state.value
             request.session['next_state'] = UserState.DISPLAY_MODULES.value
-            error_msg = 'You must either select the module "%s", mark it as interesting or ' \
+            '''
+            error_msg = 'You must either select the module \"%s\", mark it as interesting or ' \
                         'mark it as a not-for-me module before submitting feedback for it!' % module_button_pressed
+            '''
+            error_msg = 'You must either mark the module \"%s\" as interesting or ' \
+                        'as a not-for-me module before submitting feedback for it!' % module_button_pressed
             template_args = {'error_message': error_msg, 'modules': [modules[i] for i in display_indices],
                              'details': detailed_views, 'module_details': module_details,
                              'state': state.value,
@@ -449,7 +453,7 @@ def recommender_display_modules(request, state):
         if modules_dict['selected_module'] is not None:
             template_args.update({'selected_module': modules_dict['selected_module']})
         if len(modules) == 0:
-            error_msg = "There are no modules which match your current filters. " \
+            error_msg = "There are no modules matching your current filters. " \
                         "Try updating them using the button below!"
             template_args.update({'error_message': error_msg})
         elif len(display_indices) == 0:
@@ -548,7 +552,10 @@ def recommender_see_feedback(request, state):
             module_details = request.session['module_details']
             request.session['current_state'] = state.value
             request.session['next_state'] = UserState.SEE_FEEDBACK.value
-            error_msg = 'Select a choice for module %s if you want to update its feedback!' % module_button_pressed
+            '''
+            error_msg = 'Select a choice for module \"%s\" if you want to update its feedback!' % module_button_pressed
+            '''
+            error_msg = 'Before updating feedback on module \"%s\" please check another feedback option!' % module_button_pressed
             template_args = {'error_message': error_msg,
                              'details': detailed_views, 'module_details': module_details,
                              'seeFeedback': UserState.SEE_FEEDBACK.value,

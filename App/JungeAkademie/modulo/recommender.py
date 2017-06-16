@@ -91,10 +91,12 @@ class Recommender():
                 print(']')
         #'''
         category_ok = False
-        for key, value in self.filters.items():
+        # do this to ensure that the category filter gets checked first
+        for key in sorted(self.filters):
+            value = self.filters[key]
+            module_value = getattr(m, key)
             # print("key =", key)
             # print("value =", value)
-            module_value = getattr(m, key)
             # print("module_value =", module_value)
             if key == 'categories':
                 # if module has no categories assigned, consider it ok...
@@ -102,11 +104,11 @@ class Recommender():
                 for c in module_value.all():
                     if c.name in value:
                         module_category_in_selected_categories = True
-                        category_ok = True
                         break
                 if not module_category_in_selected_categories:
                     # print("Module", m.title, "doesn't respect categories filter!")
                     return False, category_ok
+                category_ok = True
             if key == 'time':
                 if not (value[0] <= module_value <= value[1]):
                     # print("Module", m.title, "doesn't respect time filter!")
