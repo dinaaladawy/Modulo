@@ -119,91 +119,110 @@
             </div> 
             {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 
-{% autoescape off %}
-{% for module in modules %}
-	<strong><a href="{% url 'modulo:modulo-module-title' module.title %}"> {{ module.title }} </a><strong><br>
-	{% if module.title in details %}
-		{{ module.module_details }}<br>
-	{% endif %}
-	<form action="{% url 'modulo:modulo-recommender' %}" method="post" style="display:inline">
-		{% csrf_token %}
-		<input type="radio" name="module{{ forloop.counter }}" value="selected" id="select{{ forloop.counter }}" onclick="selectModule({{ forloop.counter}} - 1)" />
-		<label for="select{{ forloop.counter }}">Select</label>
-		
-		<input type="radio" name="module{{ forloop.counter }}" value="interesting" id="interesting{{ forloop.counter }}" onclick="unselectModule({{ forloop.counter}} - 1)" />
-		<label for="interesting{{ forloop.counter }}">Interesting</label>
-		
-		<input type="radio" name="module{{ forloop.counter }}" value="not-for-me" id="not-for-me{{ forloop.counter }}" onclick="unselectModule({{ forloop.counter}} - 1)" />
-		<label for="not-for-me{{ forloop.counter }}">Not for me</label><br>
-		
-		<input type="submit" onclick="return submitForm({{ forloop.counter }} - 1, &quot;{{ module.title }}&quot;);" name="submit{{ forloop.counter }}" value="Submit feedback" />
-	</form>
-	<form action="{% url 'modulo:modulo-recommender' %}" method="post" style="display:inline">
-		{% csrf_token %}
-		{% if module.title in details %}
-			<input type="submit" name="details{{ forloop.counter }}" value="Hide details" />
-		{% else %}
-			<input type="submit" name="details{{ forloop.counter }}" value="More details" />
-		{% endif %}
-	</form>
-	<br><br>
+{% if recommendation_log %} <p>{{ recommendation_log | safe | linebreaksbr }}</p> {% endif %}
+
+{% comment %}
+{{ module_details | get_item:module.title }} <br>
+{{ module_details.keys }}
+{% for m, value in module_details.items %}
+<p>Module: {{ m }}; {{ value }}; {{ module_details | get_item:m }}</p>
 {% endfor %}
+{% endcomment %}
+
+{% autoescape off %}
+    {% for module in modules %}
+        <strong><a href="{% url 'modulo:modulo-module-title' module.title %}"> {{ module.title }} </a></strong><br>
+        {% if module.title in details %}
+            {{ module_details | get_item:module.title }} <br>
+            {% comment %}
+            {{ module.module_details }}<br>
+            {% endcomment %}
+        {% endif %}
+        <form action="{% url 'modulo:modulo-recommender' %}" method="post" style="display:inline">
+            {% csrf_token %}
+            {% comment %}
+            <input type="radio" name="module{{ forloop.counter }}" value="selected" id="select{{ forloop.counter }}"
+                   onclick="selectModule({{ forloop.counter }} - 1)"/>
+            <label for="select{{ forloop.counter }}">Select</label>
+            {% endcomment %}
+
+            <input type="radio" name="module{{ forloop.counter }}" value="interesting"
+                   id="interesting{{ forloop.counter }}" onclick="unselectModule({{ forloop.counter }} - 1)"/>
+            <label for="interesting{{ forloop.counter }}">Interesting</label>
+
+            <input type="radio" name="module{{ forloop.counter }}" value="not-for-me"
+                   id="not-for-me{{ forloop.counter }}" onclick="unselectModule({{ forloop.counter }} - 1)"/>
+            <label for="not-for-me{{ forloop.counter }}">Not for me</label><br>
+
+            <input type="submit" onclick="return submitForm({{ forloop.counter }} - 1, &quot;{{ module.title }}&quot;);"
+                   name="submit{{ forloop.counter }}" value="Submit feedback"/>
+        </form>
+        <form action="{% url 'modulo:modulo-recommender' %}" method="post" style="display:inline">
+            {% csrf_token %}
+            {% if module.title in details %}
+                <input type="submit" name="details{{ forloop.counter }}" value="Hide details"/>
+            {% else %}
+                <input type="submit" name="details{{ forloop.counter }}" value="More details"/>
+            {% endif %}
+        </form>
+        <br><br>
+    {% endfor %}
 <br>
 <form action="{% url 'modulo:modulo-recommender' %}" method="post" style="display:inline">
-	{% csrf_token %}
-	<input type="hidden" name="nextState" value="updateFilters">
-	<input type="submit" value="<- Update filters" />
+    {% csrf_token %}
+    <input type="hidden" name="nextState" value="updateFilters">
+    <input type="submit" value="<- Update filters"/>
 </form>
 <form action="{% url 'modulo:modulo-recommender' %}" method="post" style="display:inline">
-	{% csrf_token %}
-	<input type="hidden" name="nextState" value="seeFeedback">
-	<input type="submit" value="See feedback ->" />
+    {% csrf_token %}
+    <input type="hidden" name="nextState" value="seeFeedback">
+    <input type="submit" value="See feedback ->"/>
 </form>
 {% if feedback_provided %}
-<form action="{% url 'modulo:modulo-recommender' %}" method="post" style="display:inline">
-	{% csrf_token %}
-	<input type="submit" name="submitFeedback" value="Submit feedback -->" />
-</form>
+    <form action="{% url 'modulo:modulo-recommender' %}" method="post" style="display:inline">
+        {% csrf_token %}
+        <input type="submit" name="submitFeedback" value="Submit feedback -->"/>
+    </form>
 {% endif %}
 
 <script>
-var nrSelectedModule = 0
-var modulesSelected = []
+    var nrSelectedModule = 0;
+    var modulesSelected = [];
 
-function confirmTxt(newSelectedModule){
-	return "You can only have one selected module.\nBy proceeding you will override the selected module \""+"{{ selected_module }}"+"\" with \""+newSelectedModule+"\".\nProceed?"
-}
+    function confirmTxt(newSelectedModule) {
+        return "You can only have one selected module.\nBy proceeding you will override the selected module \"" + "{{ selected_module }}" + "\" with \"" + newSelectedModule + "\".\nProceed?"
+    }
 
-addModules()
-function addModules() {
-	{% if selected_module %}
-		nrSelectedModule = 1
-	{% endif %}
-	{% for m in modules %}
-		modulesSelected[modulesSelected.length] = false
-	{% endfor %}
-	//document.getElementById("output").innerHTML = "modulesSelected = "+modulesSelected
-}
+    addModules();
+    function addModules() {
+        {% if selected_module %}
+            nrSelectedModule = 1;
+        {% endif %}
+        {% for m in modules %}
+            modulesSelected[modulesSelected.length] = false;
+        {% endfor %}
+        //document.getElementById("output").innerHTML = "modulesSelected = "+modulesSelected
+    }
 
-function selectModule(moduleNr) {
-	//document.getElementById("output").innerHTML = "Selecting module no. "+moduleNr
-	modulesSelected[moduleNr] = true
-}
+    function selectModule(moduleNr) {
+        //document.getElementById("output").innerHTML = "Selecting module no. "+moduleNr
+        modulesSelected[moduleNr] = true
+    }
 
-function unselectModule(moduleNr){
-	//document.getElementById("output").innerHTML = "Unselecting module no. "+moduleNr
-	modulesSelected[moduleNr] = false
-}
+    function unselectModule(moduleNr) {
+        //document.getElementById("output").innerHTML = "Unselecting module no. "+moduleNr
+        modulesSelected[moduleNr] = false
+    }
 
-function submitForm(moduleNr, moduleName){
-	//document.getElementById("output").innerHTML = "Submitting form: moduleNr = "+moduleNr+" and moduleName = "+moduleName
-	if (nrSelectedModule == 1 && modulesSelected[moduleNr]){
-		return confirm(confirmTxt(moduleName));
-	}
-	else{
-		return true
-	}
-}
+    function submitForm(moduleNr, moduleName) {
+        //document.getElementById("output").innerHTML = "Submitting form: moduleNr = "+moduleNr+" and moduleName = "+moduleName
+        if (nrSelectedModule === 1 && modulesSelected[moduleNr]) {
+            return confirm(confirmTxt(moduleName));
+        }
+        else {
+            return true
+        }
+    }
 </script>
 {% endautoescape %}
 </td>

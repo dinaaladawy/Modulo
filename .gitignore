@@ -1,0 +1,5 @@
+*.pyc
+recommendations_BASE_26381.txt
+recommendations_BACKUP_26381.txt
+recommendations_LOCAL_26381.txt
+recommendations_REMOTE_26381.txt

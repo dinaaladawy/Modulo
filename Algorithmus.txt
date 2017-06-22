@@ -1,0 +1,26 @@
+Wie funktioniert der Algorithmus?
+
+1) Wir haben die Möglichkeit entweder von Anfang an das System komplett zu trainineren oder von letzten Zeitpunkt das Training fortzusetzen.
+
+2) Der Algorithmus bekommt die Liste von Interessen, die der Benutzer selektiert hat.
+Diese werden binär kodiert. Falls interests[i] == 1 bedeutet es, dass das i-te Interesse aus der Datenbank vom Benutzer selektiert wurde. Falls interests[i] == 0, wurde das i-te Interesse nicht selektiet.
+
+3) Nach der Transformation, die der Algorithmus macht (softmax(W*X + b)), werden Wahrscheinlichkeiten für jeder Kategorie ausgegeben. Diese WSKs summieren zu 1 auf.
+
+4) Die Kategorien werden nach ihrer Wahrscheinlichkeiten in fallender Reihenfolge sortiert.
+Es werden dann (abhängig von der Anzahl der Kategorien) die nicht sehr wahrscheinlichen Kategorien ausgelassen. Es gibt einen threshold, der die Kategorien begrenzt.
+
+5) Die Liste der Kategorien wird zu den anderen statischen Filters (Zeit, Ort, Credits und Prüfungstyp) hinzugefügt.
+
+6) Danach werden alle Module aus der Datenbank durchgegangen und geprüft, ob sie die Filters erfüllen. Diejenigen Module, die die Filters nicht erfüllen, werden nicht angezeigt.
+
+7) Nachdem man die "guten" Module aus der Datenbank hat, werden sie nach ihrer "Relevanz" sortiert.
+Gegenwärtig gibt die Relevanz an, wie viele Studenten das Modul selektiert haben. (Wie viele Studenten sich zum Modul eingeschrieben haben...)
+Das können wir nach den usability-Studien oder nach weiteren Brainstormings beliebig erweitern/ändern.
+
+8) Die Module werden dem Benutzer angezeigt. Er gibt sein Feedback dem System zurück.
+
+9) Das System interprätiert das Feedback folgenderweise: Falls es ein Modul selektiert wurde, dann wird es als Label der Empfehlung genommen. Falls kein Modul selektiert wurde, dann werden die interessanten Module als Label der Empfehlung genommen.
+Das System wird traininert in dem man das Input durch das Netzwerk propagiert, dann das Output mit dem Label verglichen und die Error berechnet. Die Parameter des Lernalgorithmuses werden so geändert, dass sie die Error minimieren. (gradient descent)
+
+10) Die weiteren Empfehlungen berücksichtigen alle vorherigen Feedbacks (da sie die Parameter des Netwerks geändert haben).
