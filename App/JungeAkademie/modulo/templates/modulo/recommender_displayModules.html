@@ -1,6 +1,123 @@
-<h1>Here is your recommendation</h1>
+{% load static %}
+{% load staticfiles %}
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang = "de" lang="de">
+<meta charset="ISO-8859-1">
+	<style type="text/css" media="screen"> @import url(http://portal.mytum.de/layout-tablet-landscape.css);</style>
+	<style type="text/css"
+           media="screen and (min-width:1025px)"> @import url(http://portal.mytum.de/layout.css);</style>
+	<style type="text/css" media="print"> @import url(http://portal.mytum.de/print.css);</style>
 
-{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+	<link rel="stylesheet" type="text/css" href='{% static "css/style.css" %}'>
+	<link rel="stylesheet" type="text/css" href='{% static "css/backend.css" %}'>
+	<link rel="apple-touch-icon-precomposed" sizes="57x57"
+       href="http://portal.mytum.de/apple-touch-icon-57x57.png" />
+	<link rel="apple-touch-icon-precomposed" sizes="114x114"
+       href="http://portal.mytum.de/apple-touch-icon-114x114.png" />
+	<link rel="apple-touch-icon-precomposed" sizes="72x72"
+       href="http://portal.mytum.de/apple-touch-icon-72x72.png" />
+	<link rel="apple-touch-icon-precomposed" sizes="144x144"
+       href="http://portal.mytum.de/apple-touch-icon-144x144.png" />
+	<link rel="apple-touch-icon-precomposed" sizes="60x60"
+       href="http://portal.mytum.de/apple-touch-icon-60x60.png" />
+	<link rel="apple-touch-icon-precomposed" sizes="120x120"
+       href="http://portal.mytum.de/apple-touch-icon-120x120.png" />
+	<link rel="apple-touch-icon-precomposed" sizes="76x76"
+       href="http://portal.mytum.de/apple-touch-icon-76x76.png" />
+	<link rel="apple-touch-icon-precomposed" sizes="152x152"
+       href="http://portal.mytum.de/apple-touch-icon-152x152.png" />
+	<link rel="icon" type="image/png"
+       href="http://portal.mytum.de/favicon-48x48.png"
+       sizes="48x48" />
+	<link rel="icon" type="image/png"
+       href="http://portal.mytum.de/favicon-64x64.png"
+       sizes="64x64" />
+	<link rel="icon" type="image/png"
+       href="http://portal.mytum.de/favicon-32x32.png"
+       sizes="32x32" />
+	<link rel="icon" type="image/png"
+       href="http://portal.mytum.de/favicon-16x16.png"
+       sizes="16x16" />
+    <link rel="shortcut icon"
+          href="http://portal.mytum.de/favicon.ico"
+          type="image/x-icon" />
+    <link rel="home" href="http://portal.mytum.de"
+          title="Front Page" />
+    <link rel="search"
+          href="http://portal.mytum.de/search_document_form"
+          title="Search this site" />
+
+    <script type="text/javascript"
+            src="http://portal.mytum.de/plone_javascript_variables.js"></script>
+    <script type="text/javascript"
+            src="http://portal.mytum.de/plone_javascripts.js"></script>
+   <script async="" src="//cse.google.com/adsense/search/async-ads.js"></script>
+   <script type="text/javascript" defer="" async="" src="https://www.piwik.tum.de/piwik.js"></script>
+
+<title>Recommendation</title>
+<body>
+<div id="portal-top">
+    
+        <a href="https://portal.mytum.de" alt="Startseite MyTUM" title="Startseite MyTUM"><h5 id="claim_de" class="claim">Technische Universität München</h5></a>
+        <a href="https://portal.mytum.de" alt="Home MyTUM" title="Home MyTUM"></a>
+   	    <h1 style="">
+        	<a href="http://www.tum.de" alt="Startseite tum.de" title="Startseite tum.de">Technische Universität München</a>
+        </h1>	           
+</div>
+
+<table id="layouttable">
+  <tbody>
+  <tr>
+   <td id="portal-column-one" style="position: all; padding-left: 0px; border-left: 0px; margin-left: 0px; height: 1500px">      
+   <span> 
+     <div class="portlet_no_box">
+     </div>
+   </span>
+   <span>
+     <div class="portlet_no_box">
+     </div>
+   </span>
+   <span>
+     <div class="portlet">
+         <h3>Links</h3>
+     <div>       
+     <ul id="navigationlist" class="nav_depth01">
+        <h3 id="navigationheading" class="access_aural">Navigation</h3>  <li>
+           
+
+            <a href="{% url 'modulo:modulo-index' %}" target="">Home</a>
+        </li>
+        <div>
+        <li>
+            <b>
+            <a href="{% url 'modulo:modulo-recommender' %}" target="" class="selected">Recommendation</a>
+            </b>
+        </li>
+        </div>
+        <div>
+        <li>
+            
+            <a href="{% url 'modulo:modulo-documentation' %}" target="">Documentation</a>
+        </li>
+        </div>  
+    </ul>
+    </div>  
+</div>
+</span>
+</td>
+<td id="portal-column-content">
+	<div class="contentBox" id="content">
+		<div class="document">
+			<a id="hereistthecontent" name="hereistthecontent"></a>
+			<div id="maincontentwrapper">
+            <div>
+                <h1>Here is your recommendation</h1>
+                <p></p>
+            </div>
+            </div>
+            </div>                   
+            </div> 
+            {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 
 {% autoescape off %}
 {% for module in modules %}
@@ -89,3 +206,8 @@ function submitForm(moduleNr, moduleName){
 }
 </script>
 {% endautoescape %}
+</td>
+        </tr>
+    </tbody>
+ </table>
+</body>
