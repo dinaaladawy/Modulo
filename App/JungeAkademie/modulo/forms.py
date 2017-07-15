@@ -37,7 +37,7 @@ class AdvancedRecommenderForm(forms.Form):
         fields = ['interests', 'timeMin', 'timeMax', 'creditsMin', 'creditsMax', 'exam', 'location']#, 'type', 'language']
     
     def processInterests(self):
-        interests = self.cleaned_data['interests']
+        interests = self.cleaned_data.get('interests', None)
         if interests is None:
             interests = []
         elif isinstance(interests, list):
@@ -47,8 +47,8 @@ class AdvancedRecommenderForm(forms.Form):
         return interests
     
     def processTime(self):
-        timeMin = self.cleaned_data['timeMin']
-        timeMax = self.cleaned_data['timeMax']
+        timeMin = self.cleaned_data.get('timeMin', None)
+        timeMax = self.cleaned_data.get('timeMax', None)
         if timeMin is None:
             timeMin = datetime.datetime.strptime('00:00', '%H:%M').time()
         if timeMax is None:
@@ -56,8 +56,8 @@ class AdvancedRecommenderForm(forms.Form):
         return (timeMin, timeMax)
     
     def processCredits(self):
-        creditsMin = self.cleaned_data['creditsMin']
-        creditsMax = self.cleaned_data['creditsMax']
+        creditsMin = self.cleaned_data.get('creditsMin', None)
+        creditsMax = self.cleaned_data.get('creditsMax', None)
         if creditsMin is None:
             creditsMin = 0    
         if creditsMax is None:
@@ -65,7 +65,7 @@ class AdvancedRecommenderForm(forms.Form):
         return (creditsMin, creditsMax)
     
     def processExam(self):
-        exam = self.cleaned_data['exam']
+        exam = self.cleaned_data.get('exam', None)
         if exam is None:
             exam = []
         elif isinstance(exam, list):
@@ -75,7 +75,7 @@ class AdvancedRecommenderForm(forms.Form):
         return exam
     
     def processLocation(self):
-        location = self.cleaned_data['location']
+        location = self.cleaned_data.get('location', None)
         if location is None:
             location = []
         elif isinstance(location, list):
@@ -166,7 +166,7 @@ class ModuleForm(forms.ModelForm):
         }
         
     def processInterests(self):
-        interests = self.cleaned_data['interests']
+        interests = self.cleaned_data.get('interests', None)
         if interests is None:
             interests = []
         elif isinstance(interests, list):
@@ -177,7 +177,7 @@ class ModuleForm(forms.ModelForm):
         return interests
     
     def processTime(self):
-        time = self.cleaned_data['time']
+        time = self.cleaned_data.get('time', None)
         if time is None:
             timeMin = datetime.datetime.strptime('00:00', '%H:%M').time()
             timeMax = datetime.datetime.strptime('23:59', '%H:%M').time()
@@ -187,7 +187,7 @@ class ModuleForm(forms.ModelForm):
         return (timeMin, timeMax)
     
     def processCredits(self):
-        credits = self.cleaned_data['credits']
+        credits = self.cleaned_data.get('credits', None)
         if credits is None:
             creditsMin = 0
             creditsMax = float('inf')
@@ -197,7 +197,7 @@ class ModuleForm(forms.ModelForm):
         return (creditsMin, creditsMax)
     
     def processExam(self):
-        exam = self.cleaned_data['exam']
+        exam = self.cleaned_data.get('exam', None)
         if exam is None:
             exam = []
         elif isinstance(exam, Exam):
@@ -207,7 +207,7 @@ class ModuleForm(forms.ModelForm):
         return exam
         
     def processLocation(self):
-        location = self.cleaned_data['location']
+        location = self.cleaned_data.get('location', None)
         if location is None:
             location = []
         elif isinstance(location, Location):
