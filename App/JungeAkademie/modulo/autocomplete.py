@@ -9,9 +9,14 @@ from dal import autocomplete
 from .models import CourseFormat, Exam, Language, Location, Personality
 from .models import Interest
 
+def get_autocomplete_query(string):
+    query = (r"{0}").format(".*".join([c for c in string]))
+    # print(query)
+    return query
+
 class InterestAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        #print("In InterestAutocomplete:", self.__dict__)
+        print("In InterestAutocomplete:", self.__dict__)
         # Don't forget to filter out results depending on the visitor !
         if not self.request.user.is_authenticated():
             #print("User not authenticated..")
@@ -21,8 +26,11 @@ class InterestAutocomplete(autocomplete.Select2QuerySetView):
         qs = Interest.objects.all()
 
         if self.q:
-            qs = qs.filter(name__istartswith=self.q)
-
+            # qs = qs.filter(name__istartswith=self.q)
+            qs = qs.filter(name__iregex=get_autocomplete_query(self.q))
+            for q in qs:
+                print(q.name)
+                
         return qs
 
 class CourseFormatAutocomplete(autocomplete.Select2QuerySetView):
@@ -36,13 +44,14 @@ class CourseFormatAutocomplete(autocomplete.Select2QuerySetView):
         qs = CourseFormat.objects.all()
 
         if self.q:
-            qs = qs.filter(name__istartswith=self.q)
+            # qs = qs.filter(name__istartswith=self.q)
+            qs = qs.filter(name__iregex=get_autocomplete_query(self.q))
 
         return qs
     
 class ExamAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        #print("In ExamAutocomplete:", self.__dict__)
+        # print("In ExamAutocomplete:", self.__dict__)
         # Don't forget to filter out results depending on the visitor !
         if not self.request.user.is_authenticated():
             #print("User not authenticated..")
@@ -52,7 +61,8 @@ class ExamAutocomplete(autocomplete.Select2QuerySetView):
         qs = Exam.objects.all()
 
         if self.q:
-            qs = qs.filter(exam_type__istartswith=self.q)
+            # qs = qs.filter(exam_type__istartswith=self.q)
+            qs = qs.filter(exam_type__iregex=get_autocomplete_query(self.q))
 
         return qs
     
@@ -67,13 +77,14 @@ class LanguageAutocomplete(autocomplete.Select2QuerySetView):
         qs = Language.objects.all()
 
         if self.q:
-            qs = qs.filter(language__istartswith=self.q)
+            # qs = qs.filter(language__istartswith=self.q)
+            qs = qs.filter(language__iregex=get_autocomplete_query(self.q))
 
         return qs
     
 class LocationAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        #print("In LocationAutocomplete:", self.__dict__)
+        # print("In LocationAutocomplete:", self.__dict__)
         # Don't forget to filter out results depending on the visitor !
         if not self.request.user.is_authenticated():
             #print("User not authenticated..")
@@ -83,7 +94,8 @@ class LocationAutocomplete(autocomplete.Select2QuerySetView):
         qs = Location.objects.all()
 
         if self.q:
-            qs = qs.filter(location__istartswith=self.q)
+            # qs = qs.filter(location__istartswith=self.q)
+            qs = qs.filter(location__iregex=get_autocomplete_query(self.q))
 
         return qs
     
@@ -98,6 +110,8 @@ class PersonalityAutocomplete(autocomplete.Select2QuerySetView):
         qs = Personality.objects.all()
 
         if self.q:
-            qs = qs.filter(personality__istartswith=self.q)
+            # qs = qs.filter(personality__istartswith=self.q)
+            qs = qs.filter(personality__iregex=get_autocomplete_query(self.q))
 
         return qs
+        
