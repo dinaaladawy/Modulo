@@ -5,26 +5,28 @@ Created on Sat Mar 25 05:02:51 2017
 @author: Andrei
 """
 
-import copy, numpy as np, tensorflow as tf
-from abc import ABC, abstractstaticmethod, abstractmethod
+from abc import ABC, abstractmethod  # , abstractstaticmethod
 from enum import Enum
-from .models import Module
+# from .models import Module
+import copy
+import numpy as np
+import tensorflow as tf
 
 
 # matrix must be a numpy 2d array (matrix..)
 # accepted is also a 1d array...
-def normalize_probs_col(matrix):
+def normalize_column_probabilities(matrix):
     compare = 1.0
     if len(matrix.shape) > 1:
         # dealing with matrix
         compare = np.ones((matrix.shape[1],))
 
-    if (np.abs(np.sum(matrix, axis=0) - compare) >= 1e-9).any():
+    if np.any(np.abs(np.sum(matrix, axis=0) - compare) >= 1e-9):
         # use softmax-type normalization
         matrix = np.divide(np.exp(matrix), np.sum(np.exp(matrix), axis=0))
 
     # assert that column sum is 1
-    assert ((np.abs(np.sum(matrix, axis=0) - compare) < 1e-9).all())
+    assert (np.all(np.abs(np.sum(matrix, axis=0) - compare) < 1e-9))
     return matrix
 
 
@@ -36,28 +38,25 @@ class UpdateType(Enum):
 
 
 class LearningAlgorithm(ABC):
-    @staticmethod
-    @abstractstaticmethod
-    def get_weights():
-        pass
-
-    @staticmethod
-    @abstractstaticmethod
-    def update_weights(update_type, to_delete_index=None):
+    @abstractmethod
+    def get_weights(self):
         pass
 
     @abstractmethod
-    def run_algorithm(self, train=False, evaluate=False, loss=False):
+    def update_weights(self, update_type, to_delete_index=None):
         pass
 
-    @staticmethod
-    @abstractstaticmethod
-    def initialize(**kwargs):
+    @abstractmethod
+    def run_algorithm(self, train=False, evaluate=False, loss=False, **kwargs):
+        pass
+
+    @abstractmethod
+    def create_network(self, **kwargs):
         pass
 
 
 class LinearClassifier(LearningAlgorithm):
-    # FIXME: problem with multi-threading; just one global session???
+    """
     session = None  # tensorflow session
     net_output = None  # category predictions
     net_loss = None  # loss
@@ -66,118 +65,177 @@ class LinearClassifier(LearningAlgorithm):
     b = tf.Variable([], validate_shape=False)  # biases
     x = tf.placeholder(tf.float32)  # input vector
     y = tf.placeholder(tf.float32)  # label vector
+    """
 
-    def __init__(self, rec):
+    def __init__(self, num_interests, num_categories):
         super(LinearClassifier, self).__init__()
-        self.rec = rec
+        self.net = None
+        self.session = None
+        self.num_interests = num_interests
+        self.num_categories = num_categories
 
-    def __get_input(self, all_interests):
-        nr_interests = len(all_interests)
+        self.create_network(num_interests=num_interests, num_categories=num_categories)
 
+    def __get_inputs(self, all_interests, selected_interests):
+        assert(selected_interests is not [])
         # create boolean vector of positions of interests
-        if not self.rec.interests:  # if list is empty
-            x = np.ones((1, nr_interests))
+        if not selected_interests:  # if list is empty
+            inputs = np.ones((1, self.num_interests))
         else:
-            x = np.zeros((1, nr_interests))
-            for i in self.rec.interests:
-                x[0, all_interests.index(i)] = 1
-        return x
+            inputs = np.zeros((1, self.num_interests))
+            for i in selected_interests:
+                inputs[0, all_interests.index(i)] = 1
+        # shape (1, num_interests)
+        assert (inputs.shape == (1, self.num_interests))
+        return inputs
 
-    def __get_label(self, all_categories):
-        '''
+    def __get_labels(self, all_categories, feedback):
+        """
         try:
             # list of selected module (-> selected by the student)
-            selected_modules = [Module.objects.get(title=self.rec.feedback['selected_module'])]
+            selected_modules = [Module.objects.get(title=feedback['selected_module'])]
         except Module.DoesNotExist:
             # list of interesting modules (-> selected by the student)
-            selected_modules = [Module.objects.get(title=t) for t in self.rec.feedback['interesting_modules']]
-        '''
-        selected_modules = [Module.objects.get(title=t) for t in self.rec.feedback['interesting_modules']]
-        not_interesting_modules = [Module.objects.get(title=t) for t in self.rec.feedback['not_for_me_modules']]
+            selected_modules = [Module.objects.get(title=t) for t in feedback['interesting_modules']]
+        
+        selected_modules = [Module.objects.get(title=t) for t in feedback['interesting_modules']]
+        not_interesting_modules = [Module.objects.get(title=t) for t in feedback['not_for_me_modules']]
+        """
+        selected_modules = feedback['interesting_modules']
+        # not_interesting_modules = feedback['not_for_me_modules']
 
         # get category names (with repetitions) of the selected modules
         selected_categories = [c.name for m in selected_modules for c in m.categories.all()]
-        # return label for this query -> shape = (nr_categories, )
-        return normalize_probs_col(np.array([selected_categories.count(name) for name in all_categories]))
 
-    def run_algorithm(self, train=False, evaluate=False, loss=False):
-        res = {}
-        inp = {}
+        # return label for this query;
+        # don't need to normalize probabilities anymore because we don't use the softmax anymore...
+        # return normalize_column_probabilities(np.array([selected_categories.count(name) for name in all_categories]))
+        labels = np.array([[int(c in selected_categories) for c in all_categories]])
+
+        assert (labels.shape == (1, self.num_categories))
+        return labels
+
+    def run_algorithm(self, train=False, evaluate=False, loss=False,
+                      all_interests=None, all_categories=None, selected_interests=None, feedback=None):
+        tensors = {}
+        feed_dict = {}
 
         if evaluate or loss or train:
-            inp[LinearClassifier.x] = copy.deepcopy(self.__get_input(self.rec.interest_names))
+            feed_dict[self.net.inputs] = copy.deepcopy(self.__get_inputs(all_interests, selected_interests))
             if evaluate:
-                res['eval'] = LinearClassifier.net_output
+                # tensors['eval'] = self.net.outputs
+                tensors['eval'] = self.net.predictions
             if loss or train:
-                inp[LinearClassifier.y] = copy.deepcopy(self.__get_label(self.rec.category_names))
+                feed_dict[self.net.labels] = copy.deepcopy(self.__get_labels(all_categories, feedback))
                 if loss:
-                    res['loss'] = LinearClassifier.net_loss
+                    tensors['loss'] = self.net.loss
                 if train:
-                    res['train'] = LinearClassifier.train
+                    tensors['train'] = self.net.train_op
 
-        return LinearClassifier.session.run(res, inp)
+        return self.session.run(tensors, feed_dict)
 
-    @staticmethod
-    def get_weights():
-        temp_W = tf.slice(LinearClassifier.w, begin=[0, 0], size=tf.shape(LinearClassifier.w))
-        temp_b = tf.slice(LinearClassifier.b, begin=[0], size=tf.shape(LinearClassifier.b))
-        value_W = LinearClassifier.session.run(temp_W)
-        value_b = LinearClassifier.session.run(temp_b)
-        return value_W, value_b
+    def get_weights(self):
+        """
+        temp_w = tf.slice(self.net.w, begin=[0, 0], size=tf.shape(self.net.w))
+        temp_b = tf.slice(self.net.b, begin=[0], size=tf.shape(self.net.b))
+        value_w, value_b = self.session.run([temp_w, temp_b])
+        return value_w, value_b
+        """
+        return self.session.run([self.net.w, self.net.b])
 
-    @staticmethod
-    def update_weights(update_type, to_delete_index=None):
-        value_w, value_b = LinearClassifier.get_weights()
-        op = []
+    def update_weights(self, update_type, to_delete_index=None):
+        value_w, value_b = self.get_weights()
 
         if update_type == UpdateType.DELETE_CATEGORY:
             value_w = np.delete(value_w, to_delete_index, axis=1)
             value_b = np.delete(value_b, to_delete_index, axis=0)
-            op = [tf.assign(LinearClassifier.w, value_w, validate_shape=False),
-                  tf.assign(LinearClassifier.b, value_b, validate_shape=False)]
+            op = [tf.assign(self.net.w, value_w, validate_shape=False),
+                  tf.assign(self.net.b, value_b, validate_shape=False)]
         elif update_type == UpdateType.DELETE_INTEREST:
             value_w = np.delete(value_w, to_delete_index, axis=0)
-            op = tf.assign(LinearClassifier.w, value_w, validate_shape=False)
+            op = tf.assign(self.net.w, value_w, validate_shape=False)
         elif update_type == UpdateType.INSERT_CATEGORY:
-            value_w = np.append(value_w, np.random.normal(size=[value_w.shape[0], 1]),
-                                axis=1)  # add column to weight matrix
-            value_b = np.append(value_b, np.random.normal(size=[1]), axis=0)  # add row to bias
-            op = [tf.assign(LinearClassifier.w, value_w, validate_shape=False),
-                  tf.assign(LinearClassifier.b, value_b, validate_shape=False)]
+            # add column to weight matrix
+            value_w = np.append(value_w, np.random.normal(size=[value_w.shape[0], 1]), axis=1)
+            # add row to bias
+            value_b = np.append(value_b, np.random.normal(size=[1]), axis=0)
+            op = [tf.assign(self.net.w, value_w, validate_shape=False),
+                  tf.assign(self.net.b, value_b, validate_shape=False)]
         elif update_type == UpdateType.INSERT_INTEREST:
-            value_w = np.append(value_w, np.random.normal(size=[1, value_w.shape[1]]),
-                                axis=0)  # add row to weight matrix
-            op = tf.assign(LinearClassifier.w, value_w, validate_shape=False)
+            # add row to weight matrix
+            value_w = np.append(value_w, np.random.normal(size=[1, value_w.shape[1]]), axis=0)
+            op = tf.assign(self.net.w, value_w, validate_shape=False)
         else:
-            pass
+            raise ValueError("Unknown (weights) update type")
 
-        LinearClassifier.session.run(op)  # reassign variables
+        self.session.run(op)  # reassign variables
 
-    @staticmethod
-    def initialize(**kwargs):
+    def create_network(self, **kwargs):
         num_interests = kwargs.get('num_interests', None)
         num_categories = kwargs.get('num_categories', None)
-        # normalize the data: column sum must be 1!!! why??? -> linear classifier...
-        # w = np.random.normal(loc=0.0, scale=1.0, size=(nr_categories, nr_interests))
-        # w = normalize_probs_col(w)
+        assert (num_interests is not None)
+        assert (num_categories is not None)
 
-        LinearClassifier.w = tf.Variable(tf.random_normal([num_interests, num_categories], mean=0, stddev=1),
-                                         validate_shape=False)  # weights
-        LinearClassifier.b = tf.Variable(tf.random_normal([num_categories], mean=0, stddev=1),
-                                         validate_shape=False)  # biases
-        # print("Recommender.w = ", Recommender.w, sep='')
-        # print("Recommender.b = ", Recommender.b, sep='')
-        # FIXME: problem with multi-threading; just one global session???
+        learning_rate = 0.1
+        reg = 0.01
+        self.net = LinearClassifier.get_model(num_interests=num_interests, num_categories=num_categories,
+                                              learning_rate=learning_rate, reg=reg)
+
+        saver = tf.train.Saver(var_list=tf.trainable_variables())
         config = tf.ConfigProto()
         config.gpu_options.allow_growth = True
-        LinearClassifier.session = tf.Session(config=config)
-        LinearClassifier.session.run(tf.global_variables_initializer())
+        self.session = tf.Session(config=config)
+        self.session.run(tf.global_variables_initializer())
 
-        LinearClassifier.alpha = 0.1
-        # print("Recommender.alpha = ", Recommender.alpha, sep='')
-        LinearClassifier.beta = 0.01
-        # print("Recommender.beta = ", Recommender.beta, sep='')
+        ckpt_dir = "training/saved_models/"
+        ckpt = tf.train.get_checkpoint_state(ckpt_dir)
+        if ckpt and ckpt.model_checkpoint_path:
+            saver.restore(self.session, ckpt.model_checkpoint_path)  # restore trainable variables
+            print("Restored model variables from {}!".format(ckpt.model_checkpoint_path))
+        else:
+            print("Using untrained model!")
 
+        print("LinearClassifier initialized")
+
+    @staticmethod
+    def get_model(num_interests, num_categories, learning_rate=1e-1, reg=1e-2):
+        class Model:
+            def __init__(self):
+                # placeholders
+                self.inputs = None
+                self.labels = None
+                # variables
+                self.w = None
+                self.b = None
+                # tensors
+                self.outputs = None
+                self.predictions = None
+                self.accuracy = None
+                self.loss = None
+                self.train_op = None
+
+        net = Model()
+        net.inputs = tf.placeholder("float", shape=(None, num_interests), name="inputs")
+        net.labels = tf.placeholder("float", shape=(None, num_categories), name="labels")
+        net.w = tf.get_variable("weights", shape=(num_interests, num_categories), validate_shape=True,
+                                initializer=tf.contrib.layers.xavier_initializer(),
+                                regularizer=tf.contrib.layers.l2_regularizer(reg))
+        net.b = tf.get_variable("biases", shape=(num_categories,), validate_shape=True,
+                                initializer=tf.zeros_initializer())
+        net.outputs = tf.add(tf.matmul(net.inputs, net.w), net.b, name="logits")
+
+        net.distribution = tf.nn.softmax(net.outputs)
+        net.predictions = tf.cast(tf.sigmoid(net.outputs) >= 0.5, "float", name="predictions")
+        net.accuracy = tf.reduce_mean(tf.cast(tf.equal(net.predictions, net.labels), "float"), name="accuracy")
+        reg_loss = tf.losses.get_regularization_loss()
+        data_loss = tf.losses.sigmoid_cross_entropy(multi_class_labels=net.labels, logits=net.outputs)
+        net.loss = tf.add(data_loss, reg_loss, name="loss")
+
+        # TODO: add (exponentially) decaying learning rate
+        optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+        net.train_op = optimizer.minimize(net.loss, name="train_op")
+
+        '''
         # TODO: add (exponentially) decaying learning rate
         LinearClassifier.net_output = tf.nn.softmax(
             tf.add(tf.matmul(LinearClassifier.x, LinearClassifier.w), LinearClassifier.b))
@@ -186,4 +244,6 @@ class LinearClassifier(LearningAlgorithm):
             tf.square(LinearClassifier.net_output - LinearClassifier.y)) + reg_loss
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=LinearClassifier.alpha)
         LinearClassifier.train = optimizer.minimize(LinearClassifier.net_loss)
-        print("LinearClassifier initialized")
+        '''
+
+        return net

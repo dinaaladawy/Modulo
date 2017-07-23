@@ -28,9 +28,11 @@ class InterestAutocomplete(autocomplete.Select2QuerySetView):
         if self.q:
             # qs = qs.filter(name__istartswith=self.q)
             qs = qs.filter(name__iregex=get_autocomplete_query(self.q))
+            '''
             for q in qs:
                 print(q.name)
-                
+            '''
+
         return qs
 
 class CourseFormatAutocomplete(autocomplete.Select2QuerySetView):
