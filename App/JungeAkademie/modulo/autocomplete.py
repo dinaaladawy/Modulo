@@ -16,7 +16,7 @@ def get_autocomplete_query(string):
 
 class InterestAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        print("In InterestAutocomplete:", self.__dict__)
+        # print("In InterestAutocomplete:", self.__dict__)
         # Don't forget to filter out results depending on the visitor !
         if not self.request.user.is_authenticated():
             #print("User not authenticated..")
