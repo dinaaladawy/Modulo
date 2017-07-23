@@ -11,7 +11,7 @@ django.setup()
 from databaseHelpers.insertModules import insertModules
 from databaseHelpers.insertInterests import insertInterests
 from databaseHelpers.insertCategories import insertCategories
-#from databaseHelpers.insertTestPersons import insertTestPersons
+# from databaseHelpers.insertTestPersons import insertTestPersons
 from databaseHelpers.insertExams import insertExams
 from databaseHelpers.insertLanguages import insertLanguages
 from databaseHelpers.insertLocations import insertLocations
@@ -29,7 +29,7 @@ def populateDatabase():
     
     insertInterests(databaseFile)
     insertCategories(databaseFile)
-    #insertTestPersons(databaseFile)
+    # insertTestPersons(databaseFile)
     insertModules(databaseFile) #MUST BE LAST THING TO BE UPDATED
              
 if __name__ == '__main__':

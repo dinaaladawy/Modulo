@@ -10,11 +10,11 @@ from .models import Module
 import copy
 
 
-class Feedback():
+class Feedback:
     def __init__(self, recommendation, selected_module=None, interesting_modules=[],
                  not_for_me_modules=[], seen_modules=[], not_seen_modules=[]):
         self.recommendation = recommendation
-        if hasattr(recommendation, 'feedback') and recommendation.feedback != {}:
+        if hasattr(recommendation, 'feedback') and recommendation.feedback not in [None, {}]:
             self.modules_dict = copy.deepcopy(recommendation.feedback)
         else:
             self.modules_dict = {
