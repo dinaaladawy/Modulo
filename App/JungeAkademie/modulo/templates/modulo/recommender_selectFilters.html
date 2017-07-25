@@ -1,6 +1,5 @@
 {% extends "./main_template_temp.html" %}
-{% load static %}
-{% load staticfiles %}
+
 {% block title %}
 	Select Filters
 {% endblock %}
@@ -50,7 +49,6 @@
 	{% endautoescape %}
 	{% endblock %}
 
-	<script type="text/javascript" src="{% static 'admin/js/vendor/jquery/jquery.js' %}"></script>
 	{{ moduleForm.media }}
 	{{ advancedForm.media }}
 
