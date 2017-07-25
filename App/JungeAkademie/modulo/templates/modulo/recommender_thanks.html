@@ -1,16 +1,26 @@
-<h1>Thank you for using the Modulo: recommender system!</h1>
+{% extends "./main_template_temp.html" %}
 
-<p>You can now:
-	<form action="{% url 'modulo:modulo-recommender' %}" method="get">
-		<ul>
-			<input type="submit" id="new_rec" value="get a new recommendation" />
-			<!-- <label for="new_rec">get a new recommendation</label> -->
-		</ul>
-	</form>
-	<form action="{% url 'modulo:modulo-documentation' %}" method="get">
-		<ul>
-			<input type="submit" id="go_to_doc" value="or check the documentation" />
-			<!-- or check the <a href="{% url 'modulo:modulo-documentation' %}">documentation</a> -->
-		</ul>
-	</form>
-</p>
+{% block title %}
+	Thank you!
+{% endblock %}
+
+{% block header %}
+	Thank you for using the Modulo: recommender system!
+{% endblock %}
+
+{% block content %}
+	<p>You can now:
+		<form action="{% url 'modulo:modulo-recommender' %}" method="get">
+			<ul>
+				<input type="submit" id="new_rec" value="get a new recommendation" />
+				<!-- <label for="new_rec">get a new recommendation</label> -->
+			</ul>
+		</form>
+		<form action="{% url 'modulo:modulo-documentation' %}" method="get">
+			<ul>
+				<input type="submit" id="go_to_doc" value="or check the documentation" />
+				<!-- or check the <a href="{% url 'modulo:modulo-documentation' %}">documentation</a> -->
+			</ul>
+		</form>
+	</p>
+{% endblock %}

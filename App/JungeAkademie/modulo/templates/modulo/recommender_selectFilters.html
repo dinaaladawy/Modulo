@@ -1,70 +1,78 @@
+{% extends "./main_template_temp.html" %}
 {% load static %}
+{% load staticfiles %}
+{% block title %}
+	Select Filters
+{% endblock %}
 
-<h1>Select your filters</h1>
+{% block header %}
+	Select your filters
+{% endblock %}
+{% block content %}
+	{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 
-{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+	{% autoescape off %}
+	<form id="moduleForm" action="{% url 'modulo:modulo-recommender' %}" method="post">
+		{% csrf_token %}
+		{% comment %}{{ moduleForm.as_p | linebreaksbr }}{% endcomment %}
+		{% for field in moduleForm %}
+			<div class="fieldWrapper">
+				{{ field.errors }}
+				{{ field.label_tag }} {{ field }}
+				{% if field.help_text %}
+					<p class="help">{{ field.help_text | safe | linebreaksbr }}</p>
+				{% endif %}
+			</div>
+		{% endfor %}
+		<p>
+		<input type="reset" value="Reset filters" /><button type="button" id="selectAdvancedFilters" onclick="changeFormToDisplay()"></button>
+		</p>
+		<input type="submit" name="moduleForm" value="Get course recommendation ->" />
+	</form>
 
-{% autoescape off %}
-<form id="moduleForm" action="{% url 'modulo:modulo-recommender' %}" method="post">
-	{% csrf_token %}
-	{% comment %}{{ moduleForm.as_p | linebreaksbr }}{% endcomment %}
-	{% for field in moduleForm %}
-		<div class="fieldWrapper">
-			{{ field.errors }}
-			{{ field.label_tag }} {{ field }}
-			{% if field.help_text %}
-				<p class="help">{{ field.help_text | safe | linebreaksbr }}</p>
-			{% endif %}
-		</div>
-	{% endfor %}
-	<p>
-	<input type="reset" value="Reset filters" /><button type="button" id="selectAdvancedFilters" onclick="changeFormToDisplay()"></button>
-	</p>
-	<input type="submit" name="moduleForm" value="Get course recommendation ->" />
-</form>
+	<form id="advancedForm" action="{% url 'modulo:modulo-recommender' %}" method="post">
+		{% csrf_token %}
+		{% comment %}{{ advancedForm.as_p | linebreaksbr }}{% endcomment %}
+		{% for field in advancedForm %}
+			<div class="fieldWrapper">
+				{{ field.errors }}
+				{{ field.label_tag }} {{ field }}
+				{% if field.help_text %}
+					<p class="help">{{ field.help_text | safe | linebreaksbr }}</p>
+				{% endif %}
+			</div>
+		{% endfor %}
+		<p>
+		<input type="reset" value="Reset filters" /><button type="button" id="selectNormalFilters" onclick="changeFormToDisplay()"></button>
+		</p>
+		<input type="submit" name="advancedForm" value="Get course recommendation ->" />
+	</form>
+	{% endautoescape %}
+	{% endblock %}
 
-<form id="advancedForm" action="{% url 'modulo:modulo-recommender' %}" method="post">
-	{% csrf_token %}
-	{% comment %}{{ advancedForm.as_p | linebreaksbr }}{% endcomment %}
-	{% for field in advancedForm %}
-		<div class="fieldWrapper">
-			{{ field.errors }}
-			{{ field.label_tag }} {{ field }}
-			{% if field.help_text %}
-				<p class="help">{{ field.help_text | safe | linebreaksbr }}</p>
-			{% endif %}
-		</div>
-	{% endfor %}
-	<p>
-	<input type="reset" value="Reset filters" /><button type="button" id="selectNormalFilters" onclick="changeFormToDisplay()"></button>
-	</p>
-	<input type="submit" name="advancedForm" value="Get course recommendation ->" />
-</form>
-{% endautoescape %}
+	<script type="text/javascript" src="{% static 'admin/js/vendor/jquery/jquery.js' %}"></script>
+	{{ moduleForm.media }}
+	{{ advancedForm.media }}
 
-<script type="text/javascript" src="{% static 'admin/js/vendor/jquery/jquery.js' %}"></script>
-{{ moduleForm.media }}
-{{ advancedForm.media }}
+	<script>
+	{% if advanced %}
+	var displayAdvancedForm = true
+	{% else %}
+	var displayAdvancedForm = false
+	{% endif %}
+	changeFormToDisplay()
 
-<script>
-{% if advanced %}
-var displayAdvancedForm = true
-{% else %}
-var displayAdvancedForm = false
-{% endif %}
-changeFormToDisplay()
-
-function changeFormToDisplay(){
-	if (displayAdvancedForm){
-		document.getElementById("advancedForm").style.display="block"
-		document.getElementById("moduleForm").style.display="none"
-		document.getElementById("selectNormalFilters").innerHTML = 'Normal filters'
+	function changeFormToDisplay(){
+		if (displayAdvancedForm){
+			document.getElementById("advancedForm").style.display="block"
+			document.getElementById("moduleForm").style.display="none"
+			document.getElementById("selectNormalFilters").innerHTML = 'Normal filters'
+		}
+		else{
+			document.getElementById("moduleForm").style.display="block"
+			document.getElementById("advancedForm").style.display="none"
+			document.getElementById("selectAdvancedFilters").innerHTML = 'Advanced filters'
+		}
+		displayAdvancedForm = !displayAdvancedForm
 	}
-	else{
-		document.getElementById("moduleForm").style.display="block"
-		document.getElementById("advancedForm").style.display="none"
-		document.getElementById("selectAdvancedFilters").innerHTML = 'Advanced filters'
-	}
-	displayAdvancedForm = !displayAdvancedForm
-}
-</script>
+	</script>
