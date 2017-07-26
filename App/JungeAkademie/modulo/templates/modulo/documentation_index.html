@@ -1,10 +1,15 @@
 {% extends "./main_template_temp.html" %}
+
 {% block title %}
-Modulo: documentation
+	Modulo: documentation
 {% endblock %}
 
 {% block header %}
-Welcome to the documentation of Modulo
+	Welcome to the documentation of Modulo
+{% endblock %}
+
+{% block navigation_documentation %}
+	<a href="{% url 'modulo:modulo-documentation' %}" target="" class="selected"><b>Documentation</b></a>
 {% endblock %}
 
 {% block content %}
@@ -15,6 +20,6 @@ Welcome to the documentation of Modulo
 	<!-- <ul>Test Persons</ul> -->
 	
 	{% if request.META.HTTP_REFERER %}
-	<a href="{{ request.META.HTTP_REFERER }}">Back</a>
+		<a href="{{ request.META.HTTP_REFERER }}">Back</a>
 	{% endif %}
 {% endblock %}

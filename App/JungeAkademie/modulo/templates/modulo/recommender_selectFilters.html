@@ -1,4 +1,9 @@
 {% extends "./main_template_temp.html" %}
+{% comment %}
+{% extends "./recommender_selectFilters_temp.html" %}
+{% endcomment %}
+{% load static %}
+{% load staticfiles %}
 
 {% block title %}
 	Select Filters
@@ -7,8 +12,15 @@
 {% block header %}
 	Select your filters
 {% endblock %}
+
+{% block navigation_recommendation %}
+	<a href="{% url 'modulo:modulo-recommender' %}" target="" class="selected"><b>Recommendation</b></a>
+{% endblock %}
+
 {% block content %}
-	{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+	{% if error_message %}
+		<p><strong>{{ error_message }}</strong></p>
+	{% endif %}
 
 	{% autoescape off %}
 	<form id="moduleForm" action="{% url 'modulo:modulo-recommender' %}" method="post">
@@ -24,7 +36,8 @@
 			</div>
 		{% endfor %}
 		<p>
-		<input type="reset" value="Reset filters" /><button type="button" id="selectAdvancedFilters" onclick="changeFormToDisplay()"></button>
+			<input type="reset" value="Reset filters" />
+			<button type="button" id="selectAdvancedFilters" onclick="changeFormToDisplay()"></button>
 		</p>
 		<input type="submit" name="moduleForm" value="Get course recommendation ->" />
 	</form>
@@ -42,35 +55,67 @@
 			</div>
 		{% endfor %}
 		<p>
-		<input type="reset" value="Reset filters" /><button type="button" id="selectNormalFilters" onclick="changeFormToDisplay()"></button>
+			<input type="reset" value="Reset filters" />
+			<button type="button" id="selectNormalFilters" onclick="changeFormToDisplay()"></button>
 		</p>
 		<input type="submit" name="advancedForm" value="Get course recommendation ->" />
 	</form>
 	{% endautoescape %}
-	{% endblock %}
-
+	
+	<script type="text/javascript" src="{% static 'admin/js/vendor/jquery/jquery.js' %}"></script>
 	{{ moduleForm.media }}
 	{{ advancedForm.media }}
 
-	<script>
-	{% if advanced %}
-	var displayAdvancedForm = true
-	{% else %}
-	var displayAdvancedForm = false
-	{% endif %}
-	changeFormToDisplay()
+{% endblock %}
 
-	function changeFormToDisplay(){
-		if (displayAdvancedForm){
-			document.getElementById("advancedForm").style.display="block"
-			document.getElementById("moduleForm").style.display="none"
-			document.getElementById("selectNormalFilters").innerHTML = 'Normal filters'
+{% block scripts %}
+	<script>
+		{% if advanced %}
+		var displayAdvancedForm = true
+		{% else %}
+		var displayAdvancedForm = false
+		{% endif %}
+		changeFormToDisplay()
+
+		function changeFormToDisplay(){
+			if (displayAdvancedForm){
+				document.getElementById("advancedForm").style.display="block"
+				document.getElementById("moduleForm").style.display="none"
+				document.getElementById("selectNormalFilters").innerHTML = 'Normal filters'
+			}
+			else{
+				document.getElementById("moduleForm").style.display="block"
+				document.getElementById("advancedForm").style.display="none"
+				document.getElementById("selectAdvancedFilters").innerHTML = 'Advanced filters'
+			}
+			displayAdvancedForm = !displayAdvancedForm
 		}
-		else{
-			document.getElementById("moduleForm").style.display="block"
-			document.getElementById("advancedForm").style.display="none"
-			document.getElementById("selectAdvancedFilters").innerHTML = 'Advanced filters'
-		}
-		displayAdvancedForm = !displayAdvancedForm
-	}
 	</script>
+{% endblock %}
+
+{% comment %}
+This should reset all data from select2 wigets (interests, locations and exams)
+
+// clear all option
+$('#select_with_blank_data').html('').select2({data: [{id: '', text: ''}]});
+
+// clear and add new option
+$("#select_with_data").html('').select2({data: [
+ {id: '', text: ''},
+ {id: '1', text: 'Facebook'},
+ {id: '2', text: 'Youtube'},
+ {id: '3', text: 'Instagram'},
+ {id: '4', text: 'Pinterest'}]});
+ 
+ 
+OR:
+
+
+The best way to do this now is:
+$('#your_select_input').val('');
+
+Edit: December 2016 Comments suggest that the below is the updated way to do this:
+$('#your_select_input').val([]);
+
+
+{% endcomment %}

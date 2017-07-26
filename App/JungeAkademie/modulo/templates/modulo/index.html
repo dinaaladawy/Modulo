@@ -7,6 +7,10 @@
 	Welcome to the Modulo: recommender system for elective modules
 {% endblock %}
 
+{% block navigation_home %}
+	<a href="{% url 'modulo:modulo-index' %}" target="" class="selected"><b>Home</b></a>
+{% endblock %}
+
 {% block content %}
 	Hello, world. You are at the Modulo:recommender system homepage.
 	<form action="{% url 'modulo:modulo-recommender' %}" method="get">

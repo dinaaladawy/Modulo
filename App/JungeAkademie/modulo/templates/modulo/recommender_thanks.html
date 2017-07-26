@@ -8,6 +8,10 @@
 	Thank you for using the Modulo: recommender system!
 {% endblock %}
 
+{% block navigation_recommendation %}
+	<a href="{% url 'modulo:modulo-recommender' %}" target="" class="selected"><b>Recommendation</b></a>
+{% endblock %}
+
 {% block content %}
 	<p>You can now:
 		<form action="{% url 'modulo:modulo-recommender' %}" method="get">

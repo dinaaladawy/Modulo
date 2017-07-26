@@ -8,17 +8,21 @@
     Here is your recommendation
 {% endblock %}
 
+{% block navigation_recommendation %}
+	<a href="{% url 'modulo:modulo-recommender' %}" target="" class="selected"><b>Recommendation</b></a>
+{% endblock %}
+
 {% block content %}
     {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 
     {% if recommendation_log %} <p>{{ recommendation_log | safe | linebreaksbr }}</p> {% endif %}
 
     {% comment %}
-    {{ module_details | get_item:module.title }} <br>
-    {{ module_details.keys }}
-    {% for m, value in module_details.items %}
-    <p>Module: {{ m }}; {{ value }}; {{ module_details | get_item:m }}</p>
-    {% endfor %}
+		{{ module_details | get_item:module.title }} <br>
+		{{ module_details.keys }}
+		{% for m, value in module_details.items %}
+			<p>Module: {{ m }}; {{ value }}; {{ module_details | get_item:m }}</p>
+		{% endfor %}
     {% endcomment %}
 
     {% autoescape off %}
@@ -59,61 +63,66 @@
             </form>
             <br><br>
         {% endfor %}
-    <br>
-    <form action="{% url 'modulo:modulo-recommender' %}" method="post" style="display:inline">
-        {% csrf_token %}
-        <input type="hidden" name="nextState" value="updateFilters">
-        <input type="submit" value="<- Update filters"/>
-    </form>
-    <form action="{% url 'modulo:modulo-recommender' %}" method="post" style="display:inline">
-        {% csrf_token %}
-        <input type="hidden" name="nextState" value="seeFeedback">
-        <input type="submit" value="See feedback ->"/>
-    </form>
-    {% if feedback_provided %}
-        <form action="{% url 'modulo:modulo-recommender' %}" method="post" style="display:inline">
-            {% csrf_token %}
-            <input type="submit" name="submitFeedback" value="Submit feedback -->"/>
-        </form>
-    {% endif %}
+		<br>
+		<form action="{% url 'modulo:modulo-recommender' %}" method="post" style="display:inline">
+			{% csrf_token %}
+			<input type="hidden" name="nextState" value="updateFilters">
+			<input type="submit" value="<- Update filters"/>
+		</form>
+		<form action="{% url 'modulo:modulo-recommender' %}" method="post" style="display:inline">
+			{% csrf_token %}
+			<input type="hidden" name="nextState" value="seeFeedback">
+			<input type="submit" value="See feedback ->"/>
+		</form>
+		{% if feedback_provided %}
+			<form action="{% url 'modulo:modulo-recommender' %}" method="post" style="display:inline">
+				{% csrf_token %}
+				<input type="submit" name="submitFeedback" value="Submit feedback -->"/>
+			</form>
+		{% endif %}
+	{% endautoescape %}
 {% endblock %}
-    <script>
-        var nrSelectedModule = 0;
-        var modulesSelected = [];
 
-        function confirmTxt(newSelectedModule) {
-            return "You can only have one selected module.\nBy proceeding you will override the selected module \"" + "{{ selected_module }}" + "\" with \"" + newSelectedModule + "\".\nProceed?"
-        }
+{% begin scripts %}
+	{% autoescape off %}
+		<script>
+			var nrSelectedModule = 0;
+			var modulesSelected = [];
 
-        addModules();
-        function addModules() {
-            {% if selected_module %}
-                nrSelectedModule = 1;
-            {% endif %}
-            {% for m in modules %}
-                modulesSelected[modulesSelected.length] = false;
-            {% endfor %}
-            //document.getElementById("output").innerHTML = "modulesSelected = "+modulesSelected
-        }
+			function confirmTxt(newSelectedModule) {
+				return "You can only have one selected module.\nBy proceeding you will override the selected module \"" + "{{ selected_module }}" + "\" with \"" + newSelectedModule + "\".\nProceed?"
+			}
 
-        function selectModule(moduleNr) {
-            //document.getElementById("output").innerHTML = "Selecting module no. "+moduleNr
-            modulesSelected[moduleNr] = true
-        }
+			addModules();
+			function addModules() {
+				{% if selected_module %}
+					nrSelectedModule = 1;
+				{% endif %}
+				{% for m in modules %}
+					modulesSelected[modulesSelected.length] = false;
+				{% endfor %}
+				//document.getElementById("output").innerHTML = "modulesSelected = "+modulesSelected
+			}
 
-        function unselectModule(moduleNr) {
-            //document.getElementById("output").innerHTML = "Unselecting module no. "+moduleNr
-            modulesSelected[moduleNr] = false
-        }
+			function selectModule(moduleNr) {
+				//document.getElementById("output").innerHTML = "Selecting module no. "+moduleNr
+				modulesSelected[moduleNr] = true
+			}
 
-        function submitForm(moduleNr, moduleName) {
-            //document.getElementById("output").innerHTML = "Submitting form: moduleNr = "+moduleNr+" and moduleName = "+moduleName
-            if (nrSelectedModule === 1 && modulesSelected[moduleNr]) {
-                return confirm(confirmTxt(moduleName));
-            }
-            else {
-                return true
-            }
-        }
-    </script>
-    {% endautoescape %}
+			function unselectModule(moduleNr) {
+				//document.getElementById("output").innerHTML = "Unselecting module no. "+moduleNr
+				modulesSelected[moduleNr] = false
+			}
+
+			function submitForm(moduleNr, moduleName) {
+				//document.getElementById("output").innerHTML = "Submitting form: moduleNr = "+moduleNr+" and moduleName = "+moduleName
+				if (nrSelectedModule === 1 && modulesSelected[moduleNr]) {
+					return confirm(confirmTxt(moduleName));
+				}
+				else {
+					return true
+				}
+			}
+		</script>
+	{% endautoescape %}
+{% endblock %}

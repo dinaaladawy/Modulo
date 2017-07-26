@@ -324,12 +324,14 @@ def recommender_display_modules(request, state):
         assert (request.session['modules'] is not None and
                 request.session['module_display_indices'] is not None and
                 request.session['detailed_views'] is not None and
-                request.session['module_details'] is not None)
+                request.session['module_details'] is not None and
+                request.session['rec_log'] is not None)
         modules = Module.get_modules_from_json(request.session['modules'])
         display_indices = request.session['module_display_indices']
         detailed_views = request.session['detailed_views']
         module_details = request.session['module_details']
         modules_dict = request.session['feedback']
+        recommendation_log = request.session['rec_log']
 
         if 'submitFeedback' in request.POST:
             submit_feedback(rec, modules_dict)
@@ -350,7 +352,7 @@ def recommender_display_modules(request, state):
                         'as a not-for-me module before submitting feedback for it!' % module_button_pressed
             template_args = {'error_message': error_msg, 'modules': [modules[i] for i in display_indices],
                              'details': detailed_views, 'module_details': module_details,
-                             'state': state.value,
+                             'state': state.value, 'recommendation_log': recommendation_log,
                              'displayModules': UserState.DISPLAY_MODULES.value,
                              'updateFilters': UserState.UPDATE_FILTERS.value,
                              'seeFeedback': UserState.SEE_FEEDBACK.value}

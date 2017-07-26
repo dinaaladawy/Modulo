@@ -1,10 +1,15 @@
 {% extends "./main_template_temp.html" %}
+
 {% block title %}
-{{ class }}: "{{ documentation_object }}"
+	{{ class }}: "{{ documentation_object }}"
 {% endblock %}
 
 {% block header %}
-{{ class }}: "{{ documentation_object }}"
+	{{ class }}: "{{ documentation_object }}"
+{% endblock %}
+
+{% block navigation_documentation %}
+	<a href="{% url 'modulo:modulo-documentation' %}" target="" class="selected"><b>Documentation</b></a>
 {% endblock %}
 
 {% block content %}

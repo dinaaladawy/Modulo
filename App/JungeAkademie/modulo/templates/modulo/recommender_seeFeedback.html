@@ -1,4 +1,6 @@
 {% extends "./main_template_temp.html" %}
+{% load static %}
+{% load staticfiles %}
 
 {% block title %}
     Feedback
@@ -6,6 +8,10 @@
 
 {% block header %}
     This is the feedback you provided until now
+{% endblock %}
+
+{% block navigation_recommendation %}
+	<a href="{% url 'modulo:modulo-recommender' %}" target="" class="selected"><b>Recommendation</b></a>
 {% endblock %}
 
 {% block content %}
@@ -137,7 +143,7 @@
             {% csrf_token %}
             <input type="submit" name="submitFeedback" value="Submit feedback ->"/>
         </form>
-{% endblock %}
+
         <script>
             var nrSelectedModule = 0
             var nrInterestingModules = 0
@@ -202,3 +208,4 @@
             }
         </script>
     {% endautoescape %}
+{% endblock %}

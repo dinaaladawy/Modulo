@@ -7,6 +7,10 @@
 {% block meta %}
 	<meta http-equiv="refresh" content="3;Url={% url 'modulo:modulo-recommender' %}" />
 {% endblock %}
+
+{% block navigation_recommendation %}
+	<a href="{% url 'modulo:modulo-recommender' %}" target="" class="selected"><b>Recommendation</b></a>
+{% endblock %}
   
 {% block header %}
 	Your session has expired. You will be redirected to the filter selection page.<br>
