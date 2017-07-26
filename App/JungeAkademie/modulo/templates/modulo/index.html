@@ -1,10 +1,14 @@
-{% extends "./main_template.html" %}
+{% extends "./main_template_temp.html" %}
 {% block title %}
 	Modulo Homepage
 {% endblock %}
 
 {% block header %}
 	Welcome to the Modulo: recommender system for elective modules
+{% endblock %}
+
+{% block navigation_home %}
+	<a href="{% url 'modulo:modulo-index' %}" target="" class="selected"><b>Home</b></a>
 {% endblock %}
 
 {% block content %}

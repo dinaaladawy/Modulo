@@ -1,66 +1,86 @@
-{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+{% extends "./main_template_temp.html" %}
+{% load static %}
+{% load staticfiles %}
 
-<script>
-	var leftArrow = "<- "
-	var rightArrow = " ->"
+{% block title %}
+	Error
+{% endblock %}
 
-	function getButtonDisplayValue(nextState, currentState, buttonNr){
-		var buttonID = "button"+buttonNr
-		var nextStateID = "nextState"+buttonNr
-		var nextStateString = ""
-		var displayString = (currentState > nextState ? leftArrow : "")
-		switch (nextState) {
-			case 0:{
-				nextStateString += "selectFilters"
-				displayString += "Get new recommendation"
-				break;
+{% block header %}
+	Error
+{% endblock %}
+
+{% block navigation_recommendation %}
+	<a href="{% url 'modulo:modulo-recommender' %}" target="" class="selected"><b>Recommendation</b></a>
+{% endblock %}
+
+{% block head_scripts %}
+	<script>
+		var leftArrow = "<- "
+		var rightArrow = " ->"
+
+		function getButtonDisplayValue(nextState, currentState, buttonNr){
+			var buttonID = "button"+buttonNr
+			var nextStateID = "nextState"+buttonNr
+			var nextStateString = ""
+			var displayString = (currentState > nextState ? leftArrow : "")
+			switch (nextState) {
+				case 0:{
+					nextStateString += "selectFilters"
+					displayString += "Get new recommendation"
+					break;
+				}
+				case 1:{
+					nextStateString += "displayModules"
+					displayString += "Display modules"
+					break;
+				}
+				case 2:{
+					nextStateString += "updateFilters"
+					displayString += "Update filters"
+					break;
+				}
+				case 3:{
+					nextStateString += "seeFeedback"
+					displayString += "See feedback"
+					break;
+				}
+				case 4:{
+					nextStateString += "thanks"
+					displayString += "Thank you!"
+					break;
+				}
 			}
-			case 1:{
-				nextStateString += "displayModules"
-				displayString += "Display modules"
-				break;
-			}
-			case 2:{
-				nextStateString += "updateFilters"
-				displayString += "Update filters"
-				break;
-			}
-			case 3:{
-				nextStateString += "seeFeedback"
-				displayString += "See feedback"
-				break;
-			}
-			case 4:{
-				nextStateString += "thanks"
-				displayString += "Thank you!"
-				break;
-			}
+			displayString += (currentState < nextState ? rightArrow : "")
+			document.getElementById(buttonID).value = displayString
+			document.getElementById(nextStateID).value = nextStateString
+			return displayString
 		}
-		displayString += (currentState < nextState ? rightArrow : "")
-		document.getElementById(buttonID).value = displayString
-		document.getElementById(nextStateID).value = nextStateString
-		return displayString
-	}
-</script>
+	</script>
+{% endblock %}
 
-{% if next_action %}
-	{% for a in next_action %}
+{% block content %}
+	{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+	
+	{% if next_action %}
+		{% for a in next_action %}
+			<form action="{% url 'modulo:modulo-recommender' %}" method="post">
+				{% csrf_token %}
+				<input type="hidden" id="nextState{{ forloop.counter }}" name="nextState" value="">
+				<input id="button{{ forloop.counter }}" type="submit" value="" />
+			</form>
+			<script>
+				getButtonDisplayValue({{a}}, {{state}}, {{forloop.counter}})
+			</script>
+		{% endfor %}
+	{% else %}
 		<form action="{% url 'modulo:modulo-recommender' %}" method="post">
 			{% csrf_token %}
-			<input type="hidden" id="nextState{{ forloop.counter }}" name="nextState" value="">
-			<input id="button{{ forloop.counter }}" type="submit" value="" />
+			<input type="hidden" id="nextState0" name="nextState" value="">
+			<input id="button0" type="submit" value="" />
 		</form>
 		<script>
-			getButtonDisplayValue({{a}}, {{state}}, {{forloop.counter}})
+			getButtonDisplayValue(0, {{state}}, 0) //first 0 is the state 0 = SelectFilters and second 0 is the buttonNo
 		</script>
-	{% endfor %}
-{% else %}
-	<form action="{% url 'modulo:modulo-recommender' %}" method="post">
-		{% csrf_token %}
-		<input type="hidden" id="nextState0" name="nextState" value="">
-		<input id="button0" type="submit" value="" />
-	</form>
-	<script>
-		getButtonDisplayValue(0, {{state}}, 0) //first 0 is the state 0 = SelectFilters and second 0 is the buttonNo
-	</script>
-{% endif %}
+	{% endif %}
+{% endblock %}
