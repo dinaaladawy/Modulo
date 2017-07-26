@@ -6,33 +6,15 @@
 	Error
 {% endblock %}
 
-{% block content %}
-	{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
-	
-	{% if next_action %}
-		{% for a in next_action %}
-			<form action="{% url 'modulo:modulo-recommender' %}" method="post">
-				{% csrf_token %}
-				<input type="hidden" id="nextState{{ forloop.counter }}" name="nextState" value="">
-				<input id="button{{ forloop.counter }}" type="submit" value="" />
-			</form>
-			<script>
-				getButtonDisplayValue({{a}}, {{state}}, {{forloop.counter}})
-			</script>
-		{% endfor %}
-	{% else %}
-		<form action="{% url 'modulo:modulo-recommender' %}" method="post">
-			{% csrf_token %}
-			<input type="hidden" id="nextState0" name="nextState" value="">
-			<input id="button0" type="submit" value="" />
-		</form>
-		<script>
-			getButtonDisplayValue(0, {{state}}, 0) //first 0 is the state 0 = SelectFilters and second 0 is the buttonNo
-		</script>
-	{% endif %}
+{% block header %}
+	Error
 {% endblock %}
 
-{% block scripts %}
+{% block navigation_recommendation %}
+	<a href="{% url 'modulo:modulo-recommender' %}" target="" class="selected"><b>Recommendation</b></a>
+{% endblock %}
+
+{% block head_scripts %}
 	<script>
 		var leftArrow = "<- "
 		var rightArrow = " ->"
@@ -75,4 +57,30 @@
 			return displayString
 		}
 	</script>
+{% endblock %}
+
+{% block content %}
+	{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+	
+	{% if next_action %}
+		{% for a in next_action %}
+			<form action="{% url 'modulo:modulo-recommender' %}" method="post">
+				{% csrf_token %}
+				<input type="hidden" id="nextState{{ forloop.counter }}" name="nextState" value="">
+				<input id="button{{ forloop.counter }}" type="submit" value="" />
+			</form>
+			<script>
+				getButtonDisplayValue({{a}}, {{state}}, {{forloop.counter}})
+			</script>
+		{% endfor %}
+	{% else %}
+		<form action="{% url 'modulo:modulo-recommender' %}" method="post">
+			{% csrf_token %}
+			<input type="hidden" id="nextState0" name="nextState" value="">
+			<input id="button0" type="submit" value="" />
+		</form>
+		<script>
+			getButtonDisplayValue(0, {{state}}, 0) //first 0 is the state 0 = SelectFilters and second 0 is the buttonNo
+		</script>
+	{% endif %}
 {% endblock %}

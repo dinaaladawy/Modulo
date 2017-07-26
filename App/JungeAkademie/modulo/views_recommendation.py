@@ -13,12 +13,8 @@ from .models import Module, HandleModule
 from .recommender import Recommender, HandleRecommender
 import copy, datetime, enum, json, re, threading
 
-# list containing dictionary {recommendation, recommended_modules, display_indices, detailed_indices, feedback}
-activeRequestList = None
 allowed_transitions = None
 id_counter = None
-requestListLock = None
-max_inactive_time = None
 
 
 class UserState(enum.Enum):
@@ -61,26 +57,6 @@ class UserState(enum.Enum):
 def print_session_content(session):
     for key, value in session.items():
         print("Key:", key, "with value:", value, "and value type:", type(value))
-
-
-def get_request_from_active_requests(request_id):
-    request = None
-    error_msg = 'rec not-found'
-    with requestListLock:
-        global activeRequestList, max_inactive_time
-        r = r'"id": ' + str(request_id) + r'[,}]'  # pattern to find in recommendation json_object
-        for req in activeRequestList[:]:
-            if datetime.datetime.now() - req['last_accessed'] > max_inactive_time:
-                activeRequestList.remove(req)
-                if re.search(r, req['recommendation']):
-                    error_msg = 'time\'s-up'
-            elif re.search(r, req['recommendation']):
-                assert (request_id == req['id'])
-                req['last_accessed'] = datetime.datetime.now()
-                request = req
-                error_msg = None
-                break
-    return request, error_msg
 
 
 def validate_session_state(session_current_state, session_previous_state):
@@ -277,7 +253,7 @@ def recommender_select_filters(request, state):
 
         # check whether it's valid:
         if form.is_valid():
-            global activeRequestList, id_counter
+            global id_counter
             rec = process_form(form, Recommender(id=id_counter))
             request.session['recommendation'] = json.dumps(rec, cls=HandleRecommender)
             request.session['reg_log'] = ""
@@ -290,7 +266,8 @@ def recommender_select_filters(request, state):
             request.session['advancedForm'] = isinstance(form, AdvancedRecommenderForm)
             request.session['current_state'] = state.value
             request.session['next_state'] = UserState.DISPLAY_MODULES.value
-            request.session.set_expiry(3600)  # expires after 1h = 3600s
+            # request.session.set_expiry(3600)  # expires after 1h = 3600s
+            request.session.set_expiry(300)  # expires after 5min = 300s
             # redirect to a new URL:
             return HttpResponseRedirect(reverse('modulo:modulo-recommender'))
         else:
@@ -664,8 +641,7 @@ def recommender_thanks(request, state):
 
 
 def initialize():
-    global activeRequestList, allowed_transitions, id_counter, requestListLock, max_inactive_time
-    activeRequestList = []
+    global allowed_transitions, id_counter
     allowed_transitions = [
         # initial transition
         (None, UserState.SELECT_FILTERS),
@@ -687,7 +663,4 @@ def initialize():
         (UserState.DISPLAY_MODULES, UserState.THANKS)
     ]
     id_counter = 0
-    requestListLock = threading.Lock()
-    max_inactive_time = datetime.timedelta(weeks=0, days=0, hours=0, minutes=1, seconds=0, milliseconds=0,
-                                           microseconds=0)
     print("views_recommender initialized")
