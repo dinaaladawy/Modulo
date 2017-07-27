@@ -1,10 +1,10 @@
 {% extends "./main_template_temp.html" %}
 {% block title %}
-	Modulo Homepage
+	modulo Homepage
 {% endblock %}
 
 {% block header %}
-	Welcome to the Modulo: recommender system for elective modules
+	Welcome to the modulo: recommender system for elective modules
 {% endblock %}
 
 {% block navigation_home %}
@@ -12,7 +12,9 @@
 {% endblock %}
 
 {% block content %}
-	Hello, world. You are at the Modulo:recommender system homepage.
+	<p>
+		Hello, world. You are at the modulo: recommender system homepage.
+	</p>
 	<form action="{% url 'modulo:modulo-recommender' %}" method="get">
 		<ul>
 			<input type="submit" id="new_rec" value="Get a recommendation" />

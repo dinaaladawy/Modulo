@@ -225,6 +225,8 @@ class Recommender:
                               "Based on these categories, {3} of {4} modules were selected."). \
             format(threshold, nr_selected_categories, self.filters['categories'],
                    len(modules) + nr_modules_filtered_out, nr_modules)
+        recommendation_log = ("Based on your interests, the algorithm selected {0} out of {1} modules."). \
+            format(len(modules) + nr_modules_filtered_out, nr_modules)
         if nr_modules_filtered_out > 0:
             recommendation_log += " The other filters reduced the number of modules to {0}.".format(len(modules))
         recommendation_log += "\n"

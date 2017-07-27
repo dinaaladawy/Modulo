@@ -36,7 +36,7 @@
 			</div>
 		{% endfor %}
 		<p>
-			<input type="reset" value="Reset filters" />
+			<button type="reset" value="Reset filters" onclick="resetForm(event, $(this));">Reset</button>
 			<button type="button" id="selectAdvancedFilters" onclick="changeFormToDisplay()"></button>
 		</p>
 		<input type="submit" name="moduleForm" value="Get course recommendation ->" />
@@ -55,11 +55,14 @@
 			</div>
 		{% endfor %}
 		<p>
-			<input type="reset" value="Reset filters" />
+			<button type="reset" value="Reset filters" onclick="resetForm(event, $(this));">Reset</button>
 			<button type="button" id="selectNormalFilters" onclick="changeFormToDisplay()"></button>
 		</p>
 		<input type="submit" name="advancedForm" value="Get course recommendation ->" />
 	</form>
+	<script>
+		resetForm(event, $(document.getElementById("advancedForm")));
+	</script>
 	{% endautoescape %}
 	
 	<script type="text/javascript" src="{% static 'admin/js/vendor/jquery/jquery.js' %}"></script>
@@ -86,10 +89,30 @@
 			else{
 				document.getElementById("moduleForm").style.display="block"
 				document.getElementById("advancedForm").style.display="none"
+				document.getElementById("advancedForm").load
 				document.getElementById("selectAdvancedFilters").innerHTML = 'Advanced filters'
 			}
 			displayAdvancedForm = !displayAdvancedForm
 		}
+		
+		function resetForm(e, thisobj) {
+			thisform = thisobj.closest('form');
+			selectbox_in_form = thisform.find('select');
+
+			// completely remove selected when it has been assigned.
+			selectbox_in_form.find('option:selected').removeAttr('selected');
+			selectbox_in_form.val('');
+			selectbox_in_form.change();
+
+			delete selectbox_in_form;
+			delete thisform;
+		}// resetForm
+
+		$(function() {
+			// activate Select2
+			$('.selectbox-replacement-enabler').select2();
+		});
+		
 	</script>
 {% endblock %}
 
@@ -116,6 +139,51 @@ $('#your_select_input').val('');
 
 Edit: December 2016 Comments suggest that the below is the updated way to do this:
 $('#your_select_input').val([]);
+
+
+OR:
+
+<form method="get" onsubmit="return testFormSubmit($(this));">
+    <input type="hidden" name="somehidden" value="hidden input for test many form fields.">
+    <select name="selectbox" class="selectbox-replacement-enabler test-form-submit-selectbox form-control">
+        <option value="">Please select</option>
+        <option value="ajax">Ajax</option>
+        <option value="json">Json</option>
+        <option value="jquery">jQuery</option>
+        <option value="php">PHP</option>
+        <option value="html">HTML</option>
+    </select>
+    <select name="selectbox2" class="selectbox-replacement-enabler test-form-submit-selectbox form-control">
+        <option value="">Please select</option>
+        <option value="ajax">Ajax</option>
+        <option value="json">Json</option>
+        <option value="jquery">jQuery</option>
+        <option value="php">PHP</option>
+        <option value="html" selected="selected">HTML</option>
+    </select>
+    <button type="submit" class="btn btn-primary">Submit</button>
+    <button type="reset" class="btn btn-default" onclick="resetForm(event, $(this));">Reset</button>
+</form>
+
+<script>
+	function resetForm(e, thisobj) {
+		thisform = thisobj.closest('form');
+		selectbox_in_form = thisform.find('select');
+
+		// completely remove selected when it has been assigned.
+		selectbox_in_form.find('option:selected').removeAttr('selected');
+		selectbox_in_form.val('');
+		selectbox_in_form.change();
+
+		delete selectbox_in_form;
+		delete thisform;
+	}// resetForm
+
+	$(function() {
+		// activate Select2
+		$('.selectbox-replacement-enabler').select2();
+	});
+</script>
 
 
 {% endcomment %}

@@ -2,6 +2,16 @@
     min-width: 20em;
 }
 
+.select2-container .select2-search__field:not([placeholder='']) {
+  width: 100% !important;
+  /* margin-right: 100px; */
+}
+
+.chosen-container .chosen-choices .search-field:only-child,
+.chosen-container .chosen-choices .search-field:only-child input {
+    width: 100% !important;
+}
+
 ul li.select2-selection__choice,
 ul li.select2-search {
     /* Cancel out django's style */

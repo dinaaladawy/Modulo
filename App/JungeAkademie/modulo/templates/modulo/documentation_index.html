@@ -1,11 +1,11 @@
 {% extends "./main_template_temp.html" %}
 
 {% block title %}
-	Modulo: documentation
+	modulo: documentation
 {% endblock %}
 
 {% block header %}
-	Welcome to the documentation of Modulo
+	Welcome to the documentation of modulo
 {% endblock %}
 
 {% block navigation_documentation %}
@@ -13,7 +13,10 @@
 {% endblock %}
 
 {% block content %}
-	You can check out the database:
+	<p>
+		Work in progress...<br>
+		Meanwhile, you can check out the database:
+	</p>
 	<ul><a href="{% url 'modulo:modulo-module' %}">Modules</a></ul>
 	<ul><a href="{% url 'modulo:modulo-category' %}">Categories</a></ul>
 	<ul><a href="{% url 'modulo:modulo-interest' %}">Interests</a></ul>

@@ -14,6 +14,10 @@
 	<a href="{% url 'modulo:modulo-recommender' %}" target="" class="selected"><b>Recommendation</b></a>
 {% endblock %}
 
+{% block head_scripts %}
+	<script type="text/javascript" src="{% static 'admin/js/vendor/jquery/jquery.js' %}"></script>
+{% endblock %}
+
 {% block content %}
 	{% if error_message %}
 		<p><strong>{{ error_message }}</strong></p>
@@ -33,7 +37,7 @@
 			</div>
 		{% endfor %}
 		<p>
-			<input type="reset" value="Reset filters" />
+			<button type="reset" value="Reset filters" onclick="resetForm(event, $(this));">Reset</button>
 			<button type="button" id="selectAdvancedFilters" onclick="changeFormToDisplay()"></button>
 		</p>
 		<input type="submit" name="moduleForm" value="Update filters ->" />
@@ -52,14 +56,13 @@
 			</div>
 		{% endfor %}
 		<p>
-			<input type="reset" value="Reset filters" />
+			<button type="reset" value="Reset filters" onclick="resetForm(event, $(this));">Reset</button>
 			<button type="button" id="selectNormalFilters" onclick="changeFormToDisplay()"></button>
 		</p>
 		<input type="submit" name="advancedForm" value="Update filters ->" />
 	</form>
 	{% endautoescape %}
 	
-	<script type="text/javascript" src="{% static 'admin/js/vendor/jquery/jquery.js' %}"></script>
 	{{ moduleForm.media }}
 	{{ advancedForm.media }}
 
@@ -87,5 +90,24 @@
 			}
 			displayAdvancedForm = !displayAdvancedForm
 		}
+		
+		function resetForm(e, thisobj) {
+			thisform = thisobj.closest('form');
+			selectbox_in_form = thisform.find('select');
+
+			// completely remove selected when it has been assigned.
+			selectbox_in_form.find('option:selected').removeAttr('selected');
+			selectbox_in_form.val('');
+			selectbox_in_form.change();
+
+			delete selectbox_in_form;
+			delete thisform;
+		}// resetForm
+
+		$(function() {
+			// activate Select2
+			$('.selectbox-replacement-enabler').select2();
+		});
+		
 	</script>
 {% endblock %}
