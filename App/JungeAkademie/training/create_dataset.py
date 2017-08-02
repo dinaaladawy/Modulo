@@ -6,7 +6,10 @@ Created on 22 Jul 2017 at 13:55
 """
 
 from openpyxl import load_workbook
-import django, json, os
+import django
+import numpy as np
+import json
+import os
 
 os.environ['DJANGO_SETTINGS_MODULE'] = "JungeAkademie.settings"
 django.setup()
@@ -29,11 +32,21 @@ def get_input(interests):
 
 
 def get_inputs(interests_arg, num_samples):
-    inputs = []
-    for sample in range(num_samples):
-        # TODO: add randomness here; ensure that min. 1 interest is selected
-        interests = [x[0] for x in interests_arg]
+    interests = [x[0] for x in interests_arg]
+    inputs = [get_input(interests)]
+    sample = 0
+    nr_chosen_interests = len(interests_arg)
+    while sample < num_samples - 1:
+        random = np.random.uniform(0, 1, size=(nr_chosen_interests,))
+        interests = []
+        for index, i in enumerate(interests_arg):
+            if random[index] < i[1]:
+                interests.append(i[0])
+        # ensure that min. 1 interest is selected
+        if interests is []:
+            continue
         inputs.append(get_input(interests))
+        sample += 1
     return inputs
 
 
@@ -43,10 +56,15 @@ def get_label(categories):
 
 
 def get_labels(modules_arg, num_samples):
-    labels = []
-    for sample in range(num_samples):
-        # TODO: add randomness here; ensure that min. 1 category is selected
-        categories = [c.name for m in modules_arg for c in Module.objects.get(title=m[0]).categories.all()]
+    categories = [c.name for m in modules_arg for c in Module.objects.get(title=m[0]).categories.all()]
+    labels = [get_label(categories)]
+    nr_chosen_modules = len(modules_arg)
+    for sample in range(num_samples - 1):
+        random = np.random.uniform(0, 1, size=(nr_chosen_modules, ))
+        categories = []
+        for index, m in enumerate(modules_arg):
+            if random[index] < m[1]:
+                categories.extend([c.name for c in Module.objects.get(title=m[0]).categories.all()])
         labels.append(get_label(categories))
     return labels
 
@@ -61,7 +79,7 @@ def process_data(worksheet, num_categories, num_interests, num_modules, num_samp
     return data
 
 
-def read_training_data(file, num_categories, num_interests, num_modules):
+def read_training_data(file, num_categories, num_interests, num_modules, num_samples=1):
     workbook = load_workbook(file)
     dataset = {'train': {'inputs': [], 'labels': []},
                'test': {'inputs': [], 'labels': []},
@@ -78,7 +96,7 @@ def read_training_data(file, num_categories, num_interests, num_modules):
         nr_cols = len(tuple(worksheet.columns))
         print(nr_rows, nr_cols)
 
-        data = process_data(worksheet, num_categories, num_interests, num_modules)
+        data = process_data(worksheet, num_categories, num_interests, num_modules, num_samples)
         dataset['train']['inputs'].extend(data['inputs'])
         dataset['train']['labels'].extend(data['labels'])
 
@@ -87,11 +105,18 @@ def read_training_data(file, num_categories, num_interests, num_modules):
 
 
 if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Train a model.')
+    parser.add_argument("samples", type=int, default=1000)  # number of samples per person in database
+    args = parser.parse_args()
+    nr_samples = args.samples
+
     nr_categories = len(Category.objects.all())
     nr_interests = len(Interest.objects.all())
     nr_modules = len(Module.objects.all())
     print("Categories: {}".format(nr_categories))
     print("Interests: {}".format(nr_interests))
-    print("Module: {}".format(nr_modules))
-    read_training_data("trainingdata.xlsx", num_interests=nr_interests,
+    print("Modules: {}".format(nr_modules))
+    read_training_data("trainingdata.xlsx", num_interests=nr_interests, num_samples=nr_samples,
                        num_categories=nr_categories, num_modules=nr_modules)

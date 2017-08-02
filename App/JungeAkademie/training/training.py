@@ -19,7 +19,7 @@ from modulo.models import Module, Category, Interest
 '''
 
 # '''
-get_model = LinearClassifier.get_model
+get_network = LinearClassifier.get_model
 '''
 
 
@@ -84,30 +84,37 @@ def get_dataset(reduce_training=False):
     return dataset
 
 
+def get_model(dataset):
+    num_interests = len(dataset['train']['inputs'][0])
+    num_categories = len(dataset['train']['labels'][0])
+    num_layers = 3
+    learning_rate = 1e-1
+    reg = 1e-2
+    dropout = 0.5
+    print("num_interests = {}".format(num_interests))
+    print("num_categories = {}".format(num_categories))
+    print("learning_rate = {}".format(learning_rate))
+    print("regularization = {}".format(reg))
+    net = get_network(num_interests=num_interests, num_categories=num_categories, num_layers=num_layers,
+                      learning_rate=learning_rate, reg=reg, training=True, dropout_rate=dropout)
+    return net
+
+
 def main():
     dataset = get_dataset()
 
     train_data = dataset['train']
     training_samples = len(train_data['inputs'])
     epochs = 100
-    batch_size = 10
+    batch_size = 25
     nr_batches_per_epoch = (training_samples + batch_size - 1) // batch_size
     print("training_samples = {}".format(training_samples))
     print("nr_batches_per_epoch = {}".format(nr_batches_per_epoch))
 
-    num_interests = len(dataset['train']['inputs'][0])
-    num_categories = len(dataset['train']['labels'][0])
-    learning_rate = 1e-1
-    reg = 1e-2
-    print("num_interests = {}".format(num_interests))
-    print("num_categories = {}".format(num_categories))
-    print("learning_rate = {}".format(learning_rate))
-    print("regularization = {}".format(reg))
-    net = LinearClassifier.get_model(num_interests=num_interests, num_categories=num_categories,
-                                     learning_rate=learning_rate, reg=reg)
+    net = get_model(dataset)
     print("Got model")
 
-    saver = tf.train.Saver(var_list=[net.w, net.b])
+    saver = tf.train.Saver(var_list=net.train_variables)
 
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
