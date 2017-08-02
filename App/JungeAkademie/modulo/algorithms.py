@@ -67,17 +67,18 @@ class LinearClassifier(LearningAlgorithm):
     y = tf.placeholder(tf.float32)  # label vector
     """
 
-    def __init__(self, num_interests, num_categories):
+    def __init__(self, num_interests, num_categories, num_layers=3):
         super(LinearClassifier, self).__init__()
         self.net = None
         self.session = None
         self.num_interests = num_interests
         self.num_categories = num_categories
 
-        self.create_network(num_interests=num_interests, num_categories=num_categories)
+        self.create_network(num_interests=num_interests, num_categories=num_categories,
+                            num_layers=num_layers, training=False)
 
     def __get_inputs(self, all_interests, selected_interests):
-        assert(selected_interests is not [])
+        assert (selected_interests is not [])
         # create boolean vector of positions of interests
         if not selected_interests:  # if list is empty
             inputs = np.ones((1, self.num_interests))
@@ -141,30 +142,30 @@ class LinearClassifier(LearningAlgorithm):
         value_w, value_b = self.session.run([temp_w, temp_b])
         return value_w, value_b
         """
-        return self.session.run([self.net.w, self.net.b])
+        return self.session.run([self.net.first_w, self.net.first_b, self.net.last_w, self.net.last_b])
 
     def update_weights(self, update_type, to_delete_index=None):
-        value_w, value_b = self.get_weights()
+        first_w, first_b, last_w, last_b = self.get_weights()
 
         if update_type == UpdateType.DELETE_CATEGORY:
-            value_w = np.delete(value_w, to_delete_index, axis=1)
-            value_b = np.delete(value_b, to_delete_index, axis=0)
-            op = [tf.assign(self.net.w, value_w, validate_shape=False),
-                  tf.assign(self.net.b, value_b, validate_shape=False)]
+            value_w = np.delete(last_w, to_delete_index, axis=1)
+            value_b = np.delete(last_b, to_delete_index, axis=0)
+            op = [tf.assign(self.net.last_w, value_w, validate_shape=False),
+                  tf.assign(self.net.last_b, value_b, validate_shape=False)]
         elif update_type == UpdateType.DELETE_INTEREST:
-            value_w = np.delete(value_w, to_delete_index, axis=0)
-            op = tf.assign(self.net.w, value_w, validate_shape=False)
+            value_w = np.delete(first_w, to_delete_index, axis=0)
+            op = tf.assign(self.net.first_w, value_w, validate_shape=False)
         elif update_type == UpdateType.INSERT_CATEGORY:
             # add column to weight matrix
-            value_w = np.append(value_w, np.random.normal(size=[value_w.shape[0], 1]), axis=1)
+            value_w = np.append(last_w, np.random.normal(size=[last_w.shape[0], 1]), axis=1)
             # add row to bias
-            value_b = np.append(value_b, np.random.normal(size=[1]), axis=0)
-            op = [tf.assign(self.net.w, value_w, validate_shape=False),
-                  tf.assign(self.net.b, value_b, validate_shape=False)]
+            value_b = np.append(last_b, np.random.normal(size=[1]), axis=0)
+            op = [tf.assign(self.net.last_w, value_w, validate_shape=False),
+                  tf.assign(self.net.last_b, value_b, validate_shape=False)]
         elif update_type == UpdateType.INSERT_INTEREST:
             # add row to weight matrix
-            value_w = np.append(value_w, np.random.normal(size=[1, value_w.shape[1]]), axis=0)
-            op = tf.assign(self.net.w, value_w, validate_shape=False)
+            value_w = np.append(first_w, np.random.normal(size=[1, first_w.shape[1]]), axis=0)
+            op = tf.assign(self.net.first_w, value_w, validate_shape=False)
         else:
             raise ValueError("Unknown (weights) update type")
 
@@ -198,15 +199,19 @@ class LinearClassifier(LearningAlgorithm):
         print("LinearClassifier initialized")
 
     @staticmethod
-    def get_model(num_interests, num_categories, learning_rate=1e-1, reg=1e-2):
+    def get_model(num_interests, num_categories, num_layers=3,
+                  learning_rate=1e-1, reg=1e-2, training=False, dropout_rate=0.5):
         class Model:
             def __init__(self):
                 # placeholders
                 self.inputs = None
                 self.labels = None
                 # variables
-                self.w = None
-                self.b = None
+                self.train_variables = None
+                self.first_w = None
+                self.first_b = None
+                self.last_w = None
+                self.last_b = None
                 # tensors
                 self.outputs = None
                 self.predictions = None
@@ -217,12 +222,37 @@ class LinearClassifier(LearningAlgorithm):
         net = Model()
         net.inputs = tf.placeholder("float", shape=(None, num_interests), name="inputs")
         net.labels = tf.placeholder("float", shape=(None, num_categories), name="labels")
-        net.w = tf.get_variable("weights", shape=(num_interests, num_categories), validate_shape=True,
-                                initializer=tf.contrib.layers.xavier_initializer(),
-                                regularizer=tf.contrib.layers.l2_regularizer(reg))
-        net.b = tf.get_variable("biases", shape=(num_categories,), validate_shape=True,
-                                initializer=tf.zeros_initializer())
-        net.outputs = tf.add(tf.matmul(net.inputs, net.w), net.b, name="logits")
+
+        first_layer_name = None
+        fc_init = tf.contrib.layers.xavier_initializer()
+        fc_reg = tf.contrib.layers.l2_regularizer(reg)
+
+        x = net.inputs
+        for l in range(1, num_layers):
+            layer_name = "fc{}".format(l)
+            if l == 1:
+                first_layer_name = layer_name
+            x = tf.layers.dense(x, 512, activation=tf.nn.relu, name=layer_name,
+                                kernel_initializer=fc_init, kernel_regularizer=fc_reg)
+            x = tf.layers.dropout(x, rate=dropout_rate, training=training, name="drop{}".format(l))
+        last_layer_name = "fc{}".format(num_layers)
+        x = tf.layers.dense(x, num_categories, activation=None, name=last_layer_name,
+                            kernel_initializer=fc_init, kernel_regularizer=fc_reg)
+        if first_layer_name is None:
+            first_layer_name = last_layer_name
+        net.train_variables = tf.trainable_variables()
+        print(net.train_variables)
+        with tf.variable_scope(tf.get_variable_scope(), reuse=True):
+            net.first_w = tf.get_variable("{}/kernel".format(first_layer_name))
+            net.first_b = tf.get_variable("{}/bias".format(first_layer_name))
+            net.last_w = tf.get_variable("{}/kernel".format(last_layer_name))
+            net.last_b = tf.get_variable("{}/bias".format(last_layer_name))
+        print(net.first_w)
+        print(net.first_b)
+        print(net.last_w)
+        print(net.last_b)
+
+        net.outputs = x
 
         net.distribution = tf.nn.softmax(net.outputs)
         net.predictions = tf.cast(tf.sigmoid(net.outputs) >= 0.5, "float", name="predictions")
